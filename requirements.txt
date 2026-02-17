@@ -5,3 +5,4 @@ plotly
 openai
 datasets
 nest_asyncio
+-e .
