@@ -1,0 +1,7 @@
+ragas
+streamlit
+pandas
+plotly
+openai
+datasets
+nest_asyncio

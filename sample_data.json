@@ -1,0 +1,20 @@
+[
+  {
+    "question": "What is the capital of France?",
+    "answer": "The capital of France is Paris.",
+    "contexts": ["Paris is the capital and most populous city of France.", "France is a country in Western Europe."],
+    "ground_truth": "Paris"
+  },
+  {
+    "question": "Who wrote Romeo and Juliet?",
+    "answer": "Romeo and Juliet was written by William Shakespeare.",
+    "contexts": ["William Shakespeare wrote many plays including Romeo and Juliet, Hamlet, and Macbeth.", "Romeo and Juliet is a tragedy written early in Shakespeare's career."],
+    "ground_truth": "William Shakespeare"
+  },
+  {
+    "question": "What is the speed of light?",
+    "answer": "The speed of light is approximately 299,792,458 meters per second.",
+    "contexts": ["The speed of light in vacuum is exactly 299,792,458 metres per second.", "Light travels at the fastest speed possible in the universe."],
+    "ground_truth": "299,792,458 meters per second"
+  }
+]
