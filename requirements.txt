@@ -1,8 +1,17 @@
-ragas
-streamlit
+ragas>=0.4
+streamlit>=1.30
 pandas
 plotly
 openai
 datasets
 nest_asyncio
+langchain-openai
+langchain-community
+opentelemetry-api>=1.20
+opentelemetry-sdk>=1.20
+opentelemetry-exporter-otlp-proto-http>=1.20
+opentelemetry-exporter-otlp-proto-grpc>=1.20
+pytest>=7.0
+pytest-bdd>=7.0
+ruff
 -e .
