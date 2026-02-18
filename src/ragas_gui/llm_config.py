@@ -11,7 +11,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Supported providers
 # ---------------------------------------------------------------------------
@@ -30,6 +29,24 @@ class EmbeddingProvider(str, Enum):
     GOOGLE = "google"
     HUGGINGFACE = "huggingface"
     LITELLM = "litellm"
+
+
+class CompatibilityMode(str, Enum):
+    """Controls which LLM client is used when connecting to custom endpoints.
+
+    ``NONE``
+        Use the native client for the selected provider (default).
+    ``OPENAI_COMPATIBLE``
+        Force ``ChatOpenAI`` with a custom ``base_url`` – works with Ollama,
+        vLLM, LocalAI, and any server exposing an OpenAI-compatible API.
+    ``ANTHROPIC_COMPATIBLE``
+        Force ``ChatAnthropic`` with a custom API URL – works with proxies
+        that expose an Anthropic-compatible API.
+    """
+
+    NONE = "none"
+    OPENAI_COMPATIBLE = "openai_compatible"
+    ANTHROPIC_COMPATIBLE = "anthropic_compatible"
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +82,7 @@ class LLMConfig:
     model: str = ""
     api_key: str = ""
     api_base: str = ""
+    compatibility_mode: CompatibilityMode = CompatibilityMode.NONE
     temperature: float = 0.0
     max_tokens: int | None = None
     system_prompt: str = ""
@@ -120,18 +138,45 @@ class RunSettings:
 
 
 def build_llm(cfg: LLMConfig) -> Any:
-    """Create a Ragas-compatible LLM wrapper from *cfg*.
-
-    Uses ``langchain_openai.ChatOpenAI`` for OpenAI / Azure, and falls back
-    to LiteLLM-based wrappers for other providers.
-    """
+    """Create a Ragas-compatible LLM wrapper from *cfg*."""
     import os
 
+    # --- Compatibility-mode overrides take precedence -----------------------
+    if cfg.compatibility_mode == CompatibilityMode.OPENAI_COMPATIBLE:
+        os.environ.setdefault("OPENAI_API_KEY", cfg.api_key or "no-key")
+        from langchain_openai import ChatOpenAI
+
+        kwargs: dict[str, Any] = {
+            "model": cfg.model,
+            "temperature": cfg.temperature,
+            "api_key": cfg.api_key or "no-key",
+        }
+        if cfg.max_tokens:
+            kwargs["max_tokens"] = cfg.max_tokens
+        if cfg.api_base:
+            kwargs["base_url"] = cfg.api_base
+        return ChatOpenAI(**kwargs)
+
+    if cfg.compatibility_mode == CompatibilityMode.ANTHROPIC_COMPATIBLE:
+        os.environ.setdefault("ANTHROPIC_API_KEY", cfg.api_key)
+        from langchain_anthropic import ChatAnthropic
+
+        kwargs = {
+            "model": cfg.model,
+            "temperature": cfg.temperature,
+        }
+        if cfg.max_tokens:
+            kwargs["max_tokens"] = cfg.max_tokens
+        if cfg.api_base:
+            kwargs["anthropic_api_url"] = cfg.api_base
+        return ChatAnthropic(**kwargs)
+
+    # --- Native provider paths ----------------------------------------------
     if cfg.provider == LLMProvider.OPENAI:
         os.environ.setdefault("OPENAI_API_KEY", cfg.api_key)
         from langchain_openai import ChatOpenAI
 
-        kwargs: dict[str, Any] = {
+        kwargs = {
             "model": cfg.model,
             "temperature": cfg.temperature,
         }
@@ -151,11 +196,40 @@ def build_llm(cfg: LLMConfig) -> Any:
             azure_endpoint=cfg.api_base,
         )
 
-    # Generic fallback: set the key and let ragas use defaults
+    if cfg.provider == LLMProvider.ANTHROPIC:
+        os.environ.setdefault("ANTHROPIC_API_KEY", cfg.api_key)
+        from langchain_anthropic import ChatAnthropic
+
+        kwargs = {
+            "model": cfg.model,
+            "temperature": cfg.temperature,
+        }
+        if cfg.max_tokens:
+            kwargs["max_tokens"] = cfg.max_tokens
+        if cfg.api_base:
+            kwargs["anthropic_api_url"] = cfg.api_base
+        return ChatAnthropic(**kwargs)
+
+    if cfg.provider == LLMProvider.GOOGLE:
+        os.environ.setdefault("GOOGLE_API_KEY", cfg.api_key)
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        kwargs = {
+            "model": cfg.model,
+            "temperature": cfg.temperature,
+        }
+        if cfg.max_tokens:
+            kwargs["max_output_tokens"] = cfg.max_tokens
+        return ChatGoogleGenerativeAI(**kwargs)
+
+    # LiteLLM and unknown providers: fall back to ChatOpenAI
     os.environ.setdefault("OPENAI_API_KEY", cfg.api_key)
     from langchain_openai import ChatOpenAI
 
-    return ChatOpenAI(model=cfg.model, temperature=cfg.temperature)
+    kwargs = {"model": cfg.model, "temperature": cfg.temperature}
+    if cfg.api_base:
+        kwargs["base_url"] = cfg.api_base
+    return ChatOpenAI(**kwargs)
 
 
 def build_embeddings(cfg: EmbeddingConfig) -> Any:
@@ -171,16 +245,25 @@ def build_embeddings(cfg: EmbeddingConfig) -> Any:
             kwargs["base_url"] = cfg.api_base
         return OpenAIEmbeddings(**kwargs)
 
+    if cfg.provider == EmbeddingProvider.GOOGLE:
+        os.environ.setdefault("GOOGLE_API_KEY", cfg.api_key)
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+        return GoogleGenerativeAIEmbeddings(model=cfg.model)
+
     if cfg.provider == EmbeddingProvider.HUGGINGFACE:
         from langchain_community.embeddings import HuggingFaceEmbeddings
 
         return HuggingFaceEmbeddings(model_name=cfg.model)
 
-    # Fallback to OpenAI
+    # LiteLLM / fallback → OpenAI-compatible
     os.environ.setdefault("OPENAI_API_KEY", cfg.api_key)
     from langchain_openai import OpenAIEmbeddings
 
-    return OpenAIEmbeddings(model=cfg.model)
+    kwargs = {"model": cfg.model}
+    if cfg.api_base:
+        kwargs["base_url"] = cfg.api_base
+    return OpenAIEmbeddings(**kwargs)
 
 
 def build_run_config(settings: RunSettings) -> Any:

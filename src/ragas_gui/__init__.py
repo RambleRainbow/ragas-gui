@@ -18,6 +18,7 @@ from ragas_gui.data import (
 )
 from ragas_gui.evaluation import run_evaluation
 from ragas_gui.llm_config import (
+    CompatibilityMode,
     EmbeddingConfig,
     EmbeddingProvider,
     LLMConfig,
@@ -36,6 +37,7 @@ __all__ = [
     "METRIC_CATALOGUE",
     "METRIC_REGISTRY",
     "QUICK_START_METRICS",
+    "CompatibilityMode",
     "EmbeddingConfig",
     "EmbeddingProvider",
     "EvaluationEvent",

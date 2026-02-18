@@ -17,19 +17,20 @@ import streamlit as st
 from ragas_gui.config import (
     QUICK_START_METRICS,
     MetricCategory,
-    list_metrics_by_category,
     get_metric_info,
+    list_metrics_by_category,
 )
 from ragas_gui.data import load_uploaded_file, validate_columns
 from ragas_gui.evaluation import run_evaluation
 from ragas_gui.llm_config import (
+    DEFAULT_EMBEDDING_MODELS,
+    DEFAULT_MODELS,
+    CompatibilityMode,
     EmbeddingConfig,
     EmbeddingProvider,
     LLMConfig,
     LLMProvider,
     RunSettings,
-    DEFAULT_MODELS,
-    DEFAULT_EMBEDDING_MODELS,
 )
 from ragas_gui.telemetry import (
     ExporterType,
@@ -84,10 +85,40 @@ with st.sidebar:
             0.0,
             0.05,
         )
+
+        compat_labels = {
+            CompatibilityMode.NONE: "None (native provider)",
+            CompatibilityMode.OPENAI_COMPATIBLE: "OpenAI Compatible",
+            CompatibilityMode.ANTHROPIC_COMPATIBLE: "Anthropic Compatible",
+        }
+        compat_selection = st.selectbox(
+            "Compatibility Mode",
+            list(compat_labels.values()),
+            index=0,
+            help=(
+                "Use 'OpenAI Compatible' for Ollama, vLLM, LocalAI, or any "
+                "server exposing an OpenAI-compatible API. "
+                "Use 'Anthropic Compatible' for Anthropic-compatible proxies."
+            ),
+        )
+        compat_mode = next(k for k, v in compat_labels.items() if v == compat_selection)
+
+        llm_api_base = st.text_input(
+            "API Base URL / Endpoint",
+            value="",
+            help=(
+                "Custom API endpoint. Examples: "
+                "http://localhost:11434/v1 (Ollama), "
+                "http://localhost:8000/v1 (vLLM), "
+                "https://your-azure.openai.azure.com/"
+            ),
+        )
     else:
         llm_provider_enum = LLMProvider.OPENAI
         llm_model = DEFAULT_MODELS[LLMProvider.OPENAI]
         llm_temperature = 0.0
+        compat_mode = CompatibilityMode.NONE
+        llm_api_base = ""
 
     api_key = st.text_input(
         "API Key",
@@ -99,6 +130,8 @@ with st.sidebar:
         provider=llm_provider_enum,
         model=llm_model,
         api_key=api_key,
+        api_base=llm_api_base,
+        compatibility_mode=compat_mode,
         temperature=llm_temperature,
     )
 
@@ -119,10 +152,16 @@ with st.sidebar:
             "Embedding API Key (leave blank to reuse above)",
             type="password",
         )
+        emb_api_base = st.text_input(
+            "Embedding API Base URL",
+            value="",
+            help="Custom endpoint for embeddings (e.g. http://localhost:11434/v1).",
+        )
         emb_cfg = EmbeddingConfig(
             provider=emb_provider_enum,
             model=emb_model,
             api_key=emb_api_key or api_key,
+            api_base=emb_api_base,
         )
     else:
         emb_cfg = EmbeddingConfig(
