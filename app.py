@@ -22,6 +22,14 @@ from ragas_gui.config import (
 )
 from ragas_gui.data import load_uploaded_file, validate_columns
 from ragas_gui.evaluation import run_evaluation
+from ragas_gui.i18n import (
+    QUICK_START_PROVIDER_LABELS,
+    QUICK_START_PROVIDERS,
+    SUPPORTED_LANGUAGES,
+    get_language,
+    set_language,
+    t,
+)
 from ragas_gui.llm_config import (
     DEFAULT_EMBEDDING_MODELS,
     DEFAULT_MODELS,
@@ -38,7 +46,7 @@ from ragas_gui.telemetry import (
     TelemetryManager,
 )
 
-st.set_page_config(page_title="Ragas Evaluator", page_icon="📊", layout="wide")
+st.set_page_config(page_title=t("page_title"), page_icon="📊", layout="wide")
 
 if "telemetry" not in st.session_state:
     st.session_state["telemetry"] = TelemetryManager()
@@ -47,84 +55,106 @@ telemetry: TelemetryManager = st.session_state["telemetry"]
 
 
 # ---------------------------------------------------------------------------
+# Language toggle (top of sidebar, above everything else)
+# ---------------------------------------------------------------------------
+
+with st.sidebar:
+    lang_options = list(SUPPORTED_LANGUAGES.keys())
+    current_lang = get_language()
+    _code_to_label = {v: k for k, v in SUPPORTED_LANGUAGES.items()}
+    lang_idx = lang_options.index(_code_to_label.get(current_lang, "English"))
+
+    chosen_label = st.selectbox(
+        t("lang_label"),
+        lang_options,
+        index=lang_idx,
+        key="lang_selector",
+    )
+    new_lang = SUPPORTED_LANGUAGES[chosen_label]
+    if new_lang != current_lang:
+        set_language(new_lang)
+        st.rerun()
+
+
+# ---------------------------------------------------------------------------
 # Mode toggle
 # ---------------------------------------------------------------------------
 
-st.title("📊 Ragas RAG Evaluation")
+st.title(t("app_title"))
 
 mode = st.radio(
-    "Mode",
-    ["🚀 Quick Start", "⚙️ Advanced"],
+    t("mode_label"),
+    [t("mode_quick_start"), t("mode_advanced")],
     horizontal=True,
-    help="Quick Start: sensible defaults, fewer options. Advanced: full control.",
+    help=t("mode_help"),
 )
-is_advanced = mode == "⚙️ Advanced"
+is_advanced = mode == t("mode_advanced")
 
 # ---------------------------------------------------------------------------
 # Sidebar -- LLM & Embeddings config
 # ---------------------------------------------------------------------------
 
 with st.sidebar:
-    st.header("🔑 API Configuration")
+    st.header(t("sidebar_header"))
 
+    # ---- Provider selection (available in BOTH modes) ---------------------
     if is_advanced:
         llm_provider = st.selectbox(
-            "LLM Provider",
+            t("llm_provider"),
             [p.value for p in LLMProvider],
             index=0,
         )
         llm_provider_enum = LLMProvider(llm_provider)
         llm_model = st.text_input(
-            "LLM Model",
+            t("llm_model"),
             value=DEFAULT_MODELS[llm_provider_enum],
         )
         llm_temperature = st.slider(
-            "Temperature",
+            t("temperature"),
             0.0,
             2.0,
             0.0,
             0.05,
         )
-
-        compat_labels = {
-            CompatibilityMode.NONE: "None (native provider)",
-            CompatibilityMode.OPENAI_COMPATIBLE: "OpenAI Compatible",
-            CompatibilityMode.ANTHROPIC_COMPATIBLE: "Anthropic Compatible",
-        }
-        compat_selection = st.selectbox(
-            "Compatibility Mode",
-            list(compat_labels.values()),
-            index=0,
-            help=(
-                "Use 'OpenAI Compatible' for Ollama, vLLM, LocalAI, or any "
-                "server exposing an OpenAI-compatible API. "
-                "Use 'Anthropic Compatible' for Anthropic-compatible proxies."
-            ),
-        )
-        compat_mode = next(k for k, v in compat_labels.items() if v == compat_selection)
-
-        llm_api_base = st.text_input(
-            "API Base URL / Endpoint",
-            value="",
-            help=(
-                "Custom API endpoint. Examples: "
-                "http://localhost:11434/v1 (Ollama), "
-                "http://localhost:8000/v1 (vLLM), "
-                "https://your-azure.openai.azure.com/"
-            ),
-        )
     else:
-        llm_provider_enum = LLMProvider.OPENAI
-        llm_model = DEFAULT_MODELS[LLMProvider.OPENAI]
+        qs_labels = [QUICK_START_PROVIDER_LABELS[p] for p in QUICK_START_PROVIDERS]
+        qs_choice = st.selectbox(t("provider"), qs_labels, index=0)
+        _label_to_val = {v: k for k, v in QUICK_START_PROVIDER_LABELS.items()}
+        llm_provider_enum = LLMProvider(_label_to_val[qs_choice])
+        llm_model = DEFAULT_MODELS[llm_provider_enum]
         llm_temperature = 0.0
-        compat_mode = CompatibilityMode.NONE
-        llm_api_base = ""
 
     api_key = st.text_input(
-        "API Key",
+        t("api_key"),
         type="password",
-        help="Required by Ragas for LLM-based metrics.",
+        help=t("api_key_help"),
     )
+
+    if is_advanced:
+        with st.expander(t("advanced_connection"), expanded=False):
+            llm_api_base = st.text_input(
+                t("api_base_url"),
+                value="",
+                help=t("api_base_help"),
+            )
+
+            compat_labels = {
+                CompatibilityMode.NONE: t("compat_none"),
+                CompatibilityMode.OPENAI_COMPATIBLE: t("compat_openai"),
+                CompatibilityMode.ANTHROPIC_COMPATIBLE: t("compat_anthropic"),
+            }
+            compat_selection = st.selectbox(
+                t("compat_mode"),
+                list(compat_labels.values()),
+                index=0,
+                help=t("compat_help"),
+            )
+            compat_mode = next(
+                k for k, v in compat_labels.items() if v == compat_selection
+            )
+    else:
+        compat_mode = CompatibilityMode.NONE
+        llm_api_base = ""
 
     llm_cfg = LLMConfig(
         provider=llm_provider_enum,
@@ -137,25 +167,25 @@ with st.sidebar:
 
     if is_advanced:
         st.divider()
-        st.subheader("Embeddings")
+        st.subheader(t("embeddings"))
         emb_provider = st.selectbox(
-            "Embedding Provider",
+            t("emb_provider"),
             [p.value for p in EmbeddingProvider],
             index=0,
         )
         emb_provider_enum = EmbeddingProvider(emb_provider)
         emb_model = st.text_input(
-            "Embedding Model",
+            t("emb_model"),
             value=DEFAULT_EMBEDDING_MODELS[emb_provider_enum],
         )
         emb_api_key = st.text_input(
-            "Embedding API Key (leave blank to reuse above)",
+            t("emb_api_key"),
             type="password",
         )
         emb_api_base = st.text_input(
-            "Embedding API Base URL",
+            t("emb_api_base"),
             value="",
-            help="Custom endpoint for embeddings (e.g. http://localhost:11434/v1).",
+            help=t("emb_api_base_help"),
         )
         emb_cfg = EmbeddingConfig(
             provider=emb_provider_enum,
@@ -171,7 +201,7 @@ with st.sidebar:
 
     # ---- Metrics selection ------------------------------------------------
     st.divider()
-    st.subheader("Metrics")
+    st.subheader(t("metrics"))
 
     selected_metric_names: list[str] = []
 
@@ -207,35 +237,35 @@ with st.sidebar:
 
     if is_advanced:
         st.divider()
-        with st.expander("Runtime Settings"):
-            run_settings.timeout = st.number_input(
-                "Timeout (s)", value=180, min_value=1
-            )
+        with st.expander(t("runtime_settings")):
+            run_settings.timeout = st.number_input(t("timeout"), value=180, min_value=1)
             run_settings.max_retries = st.number_input(
-                "Max Retries", value=10, min_value=0
+                t("max_retries"), value=10, min_value=0
             )
             run_settings.max_workers = st.number_input(
-                "Max Workers", value=16, min_value=1
+                t("max_workers"), value=16, min_value=1
             )
-            run_settings.seed = st.number_input("Seed", value=42)
-            bs = st.number_input("Batch Size (0 = auto)", value=0, min_value=0)
+            run_settings.seed = st.number_input(t("seed"), value=42)
+            bs = st.number_input(t("batch_size"), value=0, min_value=0)
             run_settings.batch_size = bs if bs > 0 else None
-            run_settings.raise_exceptions = st.checkbox("Raise Exceptions", value=False)
+            run_settings.raise_exceptions = st.checkbox(
+                t("raise_exceptions"), value=False
+            )
 
-        with st.expander("Observability (OpenTelemetry)"):
-            otel_enabled = st.checkbox("Enable Tracing", value=False)
+        with st.expander(t("observability")):
+            otel_enabled = st.checkbox(t("enable_tracing"), value=False)
             if otel_enabled:
                 exporter_val = st.selectbox(
-                    "Exporter",
+                    t("exporter"),
                     [e.value for e in ExporterType],
                     index=0,
                 )
                 otlp_endpoint = st.text_input(
-                    "OTLP Endpoint",
+                    t("otlp_endpoint"),
                     value="http://localhost:4318",
-                    help="Only for OTLP exporters.",
+                    help=t("otlp_help"),
                 )
-                trace_content = st.checkbox("Log Prompt/Completion Content", value=True)
+                trace_content = st.checkbox(t("log_content"), value=True)
                 telemetry.config = TelemetryConfig(
                     enabled=True,
                     exporter=ExporterType(exporter_val),
@@ -247,49 +277,46 @@ with st.sidebar:
                 telemetry.config.enabled = False
 
     st.divider()
-    st.caption("Built with Streamlit + Ragas")
+    st.caption(t("footer"))
 
 # ---------------------------------------------------------------------------
 # Main area -- upload, preview, evaluate
 # ---------------------------------------------------------------------------
 
 uploaded_file = st.file_uploader(
-    "Upload evaluation dataset (CSV or JSON)",
+    t("upload_label"),
     type=["csv", "json", "jsonl"],
-    help="Must contain columns: question, answer, contexts, ground_truth",
+    help=t("upload_help"),
 )
 
 if uploaded_file is not None:
     try:
         df = load_uploaded_file(uploaded_file)
     except Exception as exc:
-        st.error(f"Failed to read file: {exc}")
+        st.error(t("file_read_error", error=str(exc)))
         st.stop()
 
-    st.subheader("📄 Data Preview")
+    st.subheader(t("data_preview"))
     st.dataframe(df.head(10), use_container_width=True)
 
     missing = validate_columns(df)
     if missing:
-        st.error(
-            f"Missing required columns: **{', '.join(missing)}**. "
-            "Expected: `question`, `answer`, `contexts`, `ground_truth`."
-        )
+        st.error(t("missing_columns", columns=", ".join(missing)))
         st.stop()
 
-    st.success(f"Dataset loaded -- {len(df)} rows, all required columns present.")
+    st.success(t("dataset_loaded", rows=len(df)))
 
     if not api_key:
-        st.info("Enter your API key in the sidebar to enable evaluation.")
+        st.info(t("enter_api_key"))
     if not selected_metric_names:
-        st.info("Select at least one metric in the sidebar.")
+        st.info(t("select_metric"))
 
     run_disabled = not api_key or not selected_metric_names
 
-    if st.button("🚀 Run Evaluation", type="primary", disabled=run_disabled):
+    if st.button(t("run_evaluation"), type="primary", disabled=run_disabled):
         metric_infos = [get_metric_info(n) for n in selected_metric_names]
 
-        with st.spinner("Running Ragas evaluation... this may take a few minutes."):
+        with st.spinner(t("running_spinner")):
             try:
                 results = run_evaluation(
                     df=df,
@@ -300,10 +327,10 @@ if uploaded_file is not None:
                     telemetry=telemetry if telemetry.config.enabled else None,
                 )
             except Exception as exc:
-                st.error(f"Evaluation failed: {exc}")
+                st.error(t("eval_failed", error=str(exc)))
                 st.stop()
 
-        st.subheader("📈 Evaluation Results")
+        st.subheader(t("eval_results"))
         result_df = results["result_df"]
         st.dataframe(result_df, use_container_width=True)
 
@@ -311,17 +338,17 @@ if uploaded_file is not None:
         if avg_scores:
             chart_df = pd.DataFrame(
                 {
-                    "Metric": list(avg_scores.keys()),
-                    "Average Score": list(avg_scores.values()),
+                    t("chart_metric"): list(avg_scores.keys()),
+                    t("chart_avg_score"): list(avg_scores.values()),
                 }
             )
             fig = px.bar(
                 chart_df,
-                x="Metric",
-                y="Average Score",
-                color="Metric",
+                x=t("chart_metric"),
+                y=t("chart_avg_score"),
+                color=t("chart_metric"),
                 range_y=[0, 1],
-                title="Average Metric Scores",
+                title=t("chart_title"),
                 text_auto=".3f",
             )
             fig.update_layout(showlegend=False)
@@ -329,7 +356,7 @@ if uploaded_file is not None:
 
         csv_bytes = result_df.to_csv(index=False).encode("utf-8")
         st.download_button(
-            "⬇️ Download Results CSV",
+            t("download_csv"),
             data=csv_bytes,
             file_name="ragas_results.csv",
             mime="text/csv",
@@ -338,7 +365,7 @@ if uploaded_file is not None:
         # Show telemetry summary if active
         event = results.get("event")
         if event and is_advanced:
-            with st.expander("Telemetry Summary"):
+            with st.expander(t("telemetry_summary")):
                 st.json(
                     {
                         "run_id": event.run_id,
@@ -359,4 +386,4 @@ if uploaded_file is not None:
                 )
 
 else:
-    st.info("Upload a CSV or JSON file to get started.")
+    st.info(t("upload_prompt"))

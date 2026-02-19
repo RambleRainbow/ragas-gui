@@ -25,6 +25,14 @@ from ragas_gui.llm_config import (
     LLMProvider,
     RunSettings,
 )
+from ragas_gui.i18n import (
+    QUICK_START_PROVIDER_LABELS,
+    QUICK_START_PROVIDERS,
+    SUPPORTED_LANGUAGES,
+    get_language,
+    set_language,
+    t,
+)
 from ragas_gui.telemetry import (
     EvaluationEvent,
     ExporterType,
@@ -37,6 +45,9 @@ __all__ = [
     "METRIC_CATALOGUE",
     "METRIC_REGISTRY",
     "QUICK_START_METRICS",
+    "QUICK_START_PROVIDER_LABELS",
+    "QUICK_START_PROVIDERS",
+    "SUPPORTED_LANGUAGES",
     "CompatibilityMode",
     "EmbeddingConfig",
     "EmbeddingProvider",
@@ -51,11 +62,14 @@ __all__ = [
     "TelemetryManager",
     "TokenUsage",
     "build_ragas_dataset",
+    "get_language",
     "get_metric_class",
     "get_metric_info",
     "list_metrics_by_category",
     "load_uploaded_file",
     "parse_contexts",
     "run_evaluation",
+    "set_language",
+    "t",
     "validate_columns",
 ]
