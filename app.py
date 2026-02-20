@@ -7,6 +7,7 @@ Run with:
 import json
 import logging
 import sys
+from pathlib import Path
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,65 +50,32 @@ from ragas_gui.telemetry import (
     TelemetryManager,
 )
 
+PROFILES_DIR = Path.home() / ".ragas-gui"
+PROFILES_FILE = PROFILES_DIR / "profiles.json"
+
+
+def load_profiles() -> dict:
+    if PROFILES_FILE.exists():
+        try:
+            return json.loads(PROFILES_FILE.read_text())
+        except (json.JSONDecodeError, OSError):
+            return {}
+    return {}
+
+
+def save_profiles(profiles: dict) -> None:
+    PROFILES_DIR.mkdir(parents=True, exist_ok=True)
+    PROFILES_FILE.write_text(json.dumps(profiles, indent=2))
+
+
 st.set_page_config(page_title=t("page_title"), page_icon="📊", layout="wide")
 
 if "telemetry" not in st.session_state:
     st.session_state["telemetry"] = TelemetryManager()
 
-if "profiles" not in st.session_state:
-    st.session_state["profiles"] = {}
-
-if "current_profile" not in st.session_state:
-    st.session_state["current_profile"] = None
-
 telemetry: TelemetryManager = st.session_state["telemetry"]
 
-
-def on_profiles_loaded():
-    if st.session_state.get("profiles_loader"):
-        try:
-            loaded = json.loads(st.session_state["profiles_loader"])
-            if loaded and isinstance(loaded, dict):
-                st.session_state["profiles"] = loaded
-        except (json.JSONDecodeError, TypeError):
-            pass
-
-
-st.text_input(
-    "profiles_loader",
-    key="profiles_loader",
-    type="default",
-    label_visibility="collapsed",
-    on_change=on_profiles_loaded,
-)
-
-if "init_triggered" not in st.session_state:
-    st.session_state["init_triggered"] = True
-
-    js = """
-    <script>
-    (function() {
-        var profiles = localStorage.getItem('ragas_gui_profiles');
-        if (profiles) {
-            var inputs = parent.document.querySelectorAll('input[data-testid="stTextInput"]');
-            for (var i = 0; i < inputs.length; i++) {
-                var input = inputs[i];
-                var parentEl = input.closest('.stTextInput');
-                if (parentEl && parentEl.innerText === '') {
-                    input.value = profiles;
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                    input.dispatchEvent(new Event('change', { bubbles: true }));
-                    break;
-                }
-            }
-        }
-    })();
-    </script>
-    """
-    st.markdown(js, unsafe_allow_html=True)
-
-
-profiles = st.session_state.get("profiles", {})
+profiles = load_profiles()
 
 
 # ---------------------------------------------------------------------------
@@ -255,7 +223,7 @@ with st.sidebar:
             if not save_name.strip():
                 st.error(t("save_name_required"))
             else:
-                new_settings = {
+                profiles[save_name.strip()] = {
                     "provider": llm_provider,
                     "model": llm_model,
                     "base_url": llm_base_url,
@@ -266,29 +234,15 @@ with st.sidebar:
                     "emb_model": emb_model,
                     "emb_api_key": emb_api_key,
                 }
-                profiles[save_name.strip()] = new_settings
-                st.session_state["profiles"] = profiles
-                profiles_json = json.dumps(profiles)
-                save_js = f"""
-                <script>
-                    localStorage.setItem('ragas_gui_profiles', '{profiles_json}');
-                </script>
-                """
-                st.markdown(save_js, unsafe_allow_html=True)
+                save_profiles(profiles)
                 st.success(t("settings_saved", name=save_name))
+                st.rerun()
 
     with col2:
         if st.button("🗑️ " + t("delete_profile"), key="delete_profile_btn"):
             if selected_profile and selected_profile in profiles:
                 del profiles[selected_profile]
-                st.session_state["profiles"] = profiles
-                profiles_json = json.dumps(profiles)
-                delete_js = f"""
-                <script>
-                    localStorage.setItem('ragas_gui_profiles', '{profiles_json}');
-                </script>
-                """
-                st.markdown(delete_js, unsafe_allow_html=True)
+                save_profiles(profiles)
                 st.success(t("profile_deleted", name=selected_profile))
                 st.rerun()
 
