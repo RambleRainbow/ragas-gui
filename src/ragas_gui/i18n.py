@@ -38,20 +38,12 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         # Page
         "page_title": "Ragas Evaluator",
         "app_title": "\U0001f4ca Ragas RAG Evaluation",
-        # Mode toggle
-        "mode_label": "Mode",
-        "mode_quick_start": "\U0001f680 Quick Start",
-        "mode_advanced": "\u2699\ufe0f Advanced",
-        "mode_help": (
-            "Quick Start: sensible defaults, fewer options. Advanced: full control."
-        ),
         # Language
         "lang_label": "\U0001f310 Language",
-        # Sidebar header (renamed from "API Configuration")
+        # Sidebar header
         "sidebar_header": "\U0001f517 Model Settings",
         # Provider & model
         "llm_provider": "LLM Provider",
-        "provider": "Provider",
         "llm_model": "Model",
         "temperature": "Temperature",
         "api_key": "API Key",
@@ -69,17 +61,6 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "testing_connection": "Testing connection...",
         "connection_success": "Connection successful!",
         "connection_failed": "Connection failed: {error}",
-        # Compatibility (advanced connection)
-        "advanced_connection": "Advanced Connection",
-        "compat_mode": "Compatibility Mode",
-        "compat_none": "None (native provider)",
-        "compat_openai": "OpenAI Compatible",
-        "compat_anthropic": "Anthropic Compatible",
-        "compat_help": (
-            "Use 'OpenAI Compatible' for Ollama, vLLM, LocalAI, or any "
-            "server exposing an OpenAI-compatible API. "
-            "Use 'Anthropic Compatible' for Anthropic-compatible proxies."
-        ),
         # Embeddings
         "embeddings": "Embeddings",
         "emb_provider": "Embedding Provider",
@@ -146,22 +127,12 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         # 页面
         "page_title": "Ragas \u8bc4\u4f30\u5668",
         "app_title": "\U0001f4ca Ragas RAG \u8bc4\u4f30",
-        # 模式切换
-        "mode_label": "\u6a21\u5f0f",
-        "mode_quick_start": "\U0001f680 \u5feb\u901f\u5f00\u59cb",
-        "mode_advanced": "\u2699\ufe0f \u9ad8\u7ea7\u6a21\u5f0f",
-        "mode_help": (
-            "\u5feb\u901f\u5f00\u59cb\uff1a\u5408\u7406\u9ed8\u8ba4\u503c\uff0c"
-            "\u66f4\u5c11\u9009\u9879\u3002"
-            "\u9ad8\u7ea7\u6a21\u5f0f\uff1a\u5b8c\u5168\u63a7\u5236\u3002"
-        ),
         # 语言
         "lang_label": "\U0001f310 语言",
         # 侧边栏标题
         "sidebar_header": "\U0001f517 模型设置",
         # 提供商和模型
         "llm_provider": "LLM 提供商",
-        "provider": "提供商",
         "llm_model": "模型",
         "temperature": "温度",
         "api_key": "API 密钥",
@@ -179,19 +150,6 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "testing_connection": "正在测试连接...",
         "connection_success": "连接成功！",
         "connection_failed": "连接失败：{error}",
-        # 兼容模式（高级连接）
-        "advanced_connection": "\u9ad8\u7ea7\u8fde\u63a5",
-        "compat_mode": "\u517c\u5bb9\u6a21\u5f0f",
-        "compat_none": "\u65e0\uff08\u539f\u751f\u63d0\u4f9b\u5546\uff09",
-        "compat_openai": "OpenAI \u517c\u5bb9",
-        "compat_anthropic": "Anthropic \u517c\u5bb9",
-        "compat_help": (
-            "\u4f7f\u7528\u201cOpenAI \u517c\u5bb9\u201d\u8fde\u63a5 Ollama\u3001"
-            "vLLM\u3001LocalAI \u6216\u4efb\u4f55\u63d0\u4f9b OpenAI \u517c\u5bb9 "
-            "API \u7684\u670d\u52a1\u5668\u3002"
-            "\u4f7f\u7528\u201cAnthropic \u517c\u5bb9\u201d\u8fde\u63a5 "
-            "Anthropic \u517c\u5bb9\u4ee3\u7406\u3002"
-        ),
         # 嵌入模型
         "embeddings": "\u5d4c\u5165\u6a21\u578b",
         "emb_provider": "\u5d4c\u5165\u63d0\u4f9b\u5546",
@@ -273,6 +231,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     },
 }
 
+
+# ---------------------------------------------------------------------------
+# Public helpers
 # ---------------------------------------------------------------------------
 # Quick-start provider list (subset exposed in Quick Start mode)
 # ---------------------------------------------------------------------------

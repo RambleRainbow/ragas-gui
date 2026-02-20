@@ -4,15 +4,13 @@ Run with:
     streamlit run app.py
 """
 
-import os
-import sys
+import json
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
 from ragas_gui.config import (
-    QUICK_START_METRICS,
     MetricCategory,
     get_metric_info,
     list_metrics_by_category,
@@ -20,8 +18,6 @@ from ragas_gui.config import (
 from ragas_gui.data import load_uploaded_file, validate_columns
 from ragas_gui.evaluation import run_evaluation
 from ragas_gui.i18n import (
-    QUICK_START_PROVIDER_LABELS,
-    QUICK_START_PROVIDERS,
     SUPPORTED_LANGUAGES,
     get_language,
     set_language,
@@ -150,18 +146,10 @@ with st.sidebar:
 
 
 # ---------------------------------------------------------------------------
-# Mode toggle
+# Main title
 # ---------------------------------------------------------------------------
 
 st.title(t("app_title"))
-
-mode = st.radio(
-    t("mode_label"),
-    [t("mode_quick_start"), t("mode_advanced")],
-    horizontal=True,
-    help=t("mode_help"),
-)
-is_advanced = mode == t("mode_advanced")
 
 # ---------------------------------------------------------------------------
 # Sidebar -- LLM & Embeddings config
@@ -170,56 +158,45 @@ is_advanced = mode == t("mode_advanced")
 with st.sidebar:
     st.header(t("sidebar_header"))
 
-    # ---- Provider selection (available in BOTH modes) ---------------------
     saved_provider = loaded_settings.get("provider", "openai")
     saved_model = loaded_settings.get("model", "")
     saved_base_url = loaded_settings.get("base_url", "")
     saved_temperature = loaded_settings.get("temperature", 0.0)
     saved_api_key = loaded_settings.get("api_key", "")
 
-    # ---- Embeddings config (loaded from saved settings) --------------------
     saved_emb_provider = loaded_settings.get("emb_provider", "openai")
     saved_emb_base_url = loaded_settings.get("emb_base_url", "")
     saved_emb_model = loaded_settings.get("emb_model", "")
     saved_emb_api_key = loaded_settings.get("emb_api_key", "")
 
-    if is_advanced:
-        provider_options = [p.value for p in Provider]
-        default_idx = (
-            provider_options.index(saved_provider)
-            if saved_provider in provider_options
-            else 0
-        )
-        llm_provider = st.selectbox(
-            t("llm_provider"),
-            provider_options,
-            index=default_idx,
-        )
-        llm_provider_enum = Provider(llm_provider)
-        llm_base_url = st.text_input(
-            t("base_url"),
-            value=saved_base_url or DEFAULT_MODELS.get(llm_provider_enum, ""),
-            help=t("base_url_help"),
-        )
-        llm_model = st.text_input(
-            t("llm_model"),
-            value=saved_model or DEFAULT_MODELS.get(llm_provider_enum, ""),
-        )
-        llm_temperature = st.slider(
-            t("temperature"),
-            0.0,
-            2.0,
-            saved_temperature,
-            0.05,
-        )
-    else:
-        qs_labels = [QUICK_START_PROVIDER_LABELS[p] for p in QUICK_START_PROVIDERS]
-        qs_choice = st.selectbox(t("provider"), qs_labels, index=0)
-        _label_to_val = {v: k for k, v in QUICK_START_PROVIDER_LABELS.items()}
-        llm_provider_enum = Provider(_label_to_val[qs_choice])
-        llm_base_url = saved_base_url or DEFAULT_MODELS.get(llm_provider_enum, "")
-        llm_model = saved_model or DEFAULT_MODELS.get(llm_provider_enum, "")
-        llm_temperature = saved_temperature
+    provider_options = [p.value for p in Provider]
+    default_idx = (
+        provider_options.index(saved_provider)
+        if saved_provider in provider_options
+        else 0
+    )
+    llm_provider = st.selectbox(
+        t("llm_provider"),
+        provider_options,
+        index=default_idx,
+    )
+    llm_provider_enum = Provider(llm_provider)
+    llm_base_url = st.text_input(
+        t("base_url"),
+        value=saved_base_url or DEFAULT_MODELS.get(llm_provider_enum, ""),
+        help=t("base_url_help"),
+    )
+    llm_model = st.text_input(
+        t("llm_model"),
+        value=saved_model or DEFAULT_MODELS.get(llm_provider_enum, ""),
+    )
+    llm_temperature = st.slider(
+        t("temperature"),
+        0.0,
+        2.0,
+        saved_temperature,
+        0.05,
+    )
 
     api_key = st.text_input(
         t("api_key"),
@@ -228,76 +205,54 @@ with st.sidebar:
         help=t("api_key_help"),
     )
 
-    # ---- Embeddings config (rendered before Save Settings) --------------------
-    if is_advanced:
-        st.divider()
-        st.subheader(t("embeddings"))
-        emb_provider_options = [p.value for p in EmbeddingProvider]
-        emb_default_idx = (
-            emb_provider_options.index(saved_emb_provider)
-            if saved_emb_provider in emb_provider_options
-            else 0
-        )
-        emb_provider = st.selectbox(
-            t("emb_provider"),
-            emb_provider_options,
-            index=emb_default_idx,
-        )
-        emb_provider_enum = EmbeddingProvider(emb_provider)
-        emb_base_url = st.text_input(
-            t("emb_base_url"),
-            value=saved_emb_base_url
-            or DEFAULT_EMBEDDING_BASE_URLS.get(emb_provider_enum, ""),
-            help=t("emb_base_url_help"),
-        )
-        emb_model = st.text_input(
-            t("emb_model"),
-            value=saved_emb_model
-            or DEFAULT_EMBEDDING_MODELS.get(emb_provider_enum, ""),
-        )
-        emb_api_key = st.text_input(
-            t("emb_api_key"),
-            type="password",
-            value=saved_emb_api_key,
-        )
-        emb_cfg = EmbeddingConfig(
-            provider=emb_provider_enum,
-            base_url=emb_base_url,
-            model_name=emb_model,
-            api_key=emb_api_key or api_key,
-        )
-    else:
-        emb_cfg = EmbeddingConfig(
-            provider=EmbeddingProvider.OPENAI,
-            api_key=api_key,
-        )
+    st.divider()
+    st.subheader(t("embeddings"))
+    emb_provider_options = [p.value for p in EmbeddingProvider]
+    emb_default_idx = (
+        emb_provider_options.index(saved_emb_provider)
+        if saved_emb_provider in emb_provider_options
+        else 0
+    )
+    emb_provider = st.selectbox(
+        t("emb_provider"),
+        emb_provider_options,
+        index=emb_default_idx,
+    )
+    emb_provider_enum = EmbeddingProvider(emb_provider)
+    emb_base_url = st.text_input(
+        t("emb_base_url"),
+        value=saved_emb_base_url
+        or DEFAULT_EMBEDDING_BASE_URLS.get(emb_provider_enum, ""),
+        help=t("emb_base_url_help"),
+    )
+    emb_model = st.text_input(
+        t("emb_model"),
+        value=saved_emb_model or DEFAULT_EMBEDDING_MODELS.get(emb_provider_enum, ""),
+    )
+    emb_api_key = st.text_input(
+        t("emb_api_key"),
+        type="password",
+        value=saved_emb_api_key,
+    )
+    emb_cfg = EmbeddingConfig(
+        provider=emb_provider_enum,
+        base_url=emb_base_url,
+        model_name=emb_model,
+        api_key=emb_api_key or api_key,
+    )
 
-    # ---- Save Settings Button -----------------------------------------------
     if st.button("💾 Save Settings", key="save_settings_btn"):
-        # Determine provider value based on mode
-        provider_to_save = llm_provider if is_advanced else _label_to_val[qs_choice]
-
         settings = {
-            "provider": provider_to_save,
+            "provider": llm_provider,
             "model": llm_model,
             "base_url": llm_base_url,
             "temperature": llm_temperature,
             "api_key": api_key,
+            "emb_provider": emb_provider,
+            "emb_base_url": emb_base_url,
+            "emb_model": emb_model,
+            "emb_api_key": emb_api_key,
         }
-
-        # Add embeddings config if in advanced mode
-        if is_advanced:
-            settings.update(
-                {
-                    "emb_provider": emb_provider,
-                    "emb_base_url": emb_base_url,
-                    "emb_model": emb_model,
-                    "emb_api_key": emb_api_key,
-                }
-            )
-
-        import json
-
         settings_json = json.dumps(settings)
         save_js = f"""
         <script>
@@ -325,7 +280,6 @@ with st.sidebar:
         else:
             st.error(t("connection_failed", error=message))
 
-
     # Create LLM config
     llm_cfg = LLMConfig(
         provider=llm_provider_enum,
@@ -340,77 +294,63 @@ with st.sidebar:
     st.subheader(t("metrics"))
 
     selected_metric_names: list[str] = []
+    metrics_by_cat = list_metrics_by_category()
+    for cat in MetricCategory:
+        infos = metrics_by_cat.get(cat, [])
+        if not infos:
+            continue
+        with st.expander(
+            cat.value,
+            expanded=(cat in {MetricCategory.RAG_CORE, MetricCategory.RAG_CONTEXT}),
+        ):
+            for info in infos:
+                if st.checkbox(
+                    info.display_name,
+                    value=False,
+                    help=info.description,
+                    key=f"metric_{info.name}",
+                ):
+                    selected_metric_names.append(info.display_name)
 
-    if is_advanced:
-        metrics_by_cat = list_metrics_by_category()
-        for cat in MetricCategory:
-            infos = metrics_by_cat.get(cat, [])
-            if not infos:
-                continue
-            with st.expander(
-                cat.value,
-                expanded=(cat in {MetricCategory.RAG_CORE, MetricCategory.RAG_CONTEXT}),
-            ):
-                for info in infos:
-                    checked = info.display_name in QUICK_START_METRICS
-                    if st.checkbox(
-                        info.display_name,
-                        value=checked,
-                        help=info.description,
-                        key=f"metric_{info.name}",
-                    ):
-                        selected_metric_names.append(info.display_name)
-    else:
-        for name in QUICK_START_METRICS:
-            info = get_metric_info(name)
-            if st.checkbox(
-                name, value=True, help=info.description, key=f"qs_{info.name}"
-            ):
-                selected_metric_names.append(name)
-
-    # ---- Advanced: RunConfig, Telemetry -----------------------------------
     run_settings = RunSettings()
 
-    if is_advanced:
-        st.divider()
-        with st.expander(t("runtime_settings")):
-            run_settings.timeout = st.number_input(t("timeout"), value=180, min_value=1)
-            run_settings.max_retries = st.number_input(
-                t("max_retries"), value=10, min_value=0
-            )
-            run_settings.max_workers = st.number_input(
-                t("max_workers"), value=16, min_value=1
-            )
-            run_settings.seed = st.number_input(t("seed"), value=42)
-            bs = st.number_input(t("batch_size"), value=0, min_value=0)
-            run_settings.batch_size = bs if bs > 0 else None
-            run_settings.raise_exceptions = st.checkbox(
-                t("raise_exceptions"), value=False
-            )
+    st.divider()
+    with st.expander(t("runtime_settings")):
+        run_settings.timeout = st.number_input(t("timeout"), value=180, min_value=1)
+        run_settings.max_retries = st.number_input(
+            t("max_retries"), value=10, min_value=0
+        )
+        run_settings.max_workers = st.number_input(
+            t("max_workers"), value=16, min_value=1
+        )
+        run_settings.seed = st.number_input(t("seed"), value=42)
+        bs = st.number_input(t("batch_size"), value=0, min_value=0)
+        run_settings.batch_size = bs if bs > 0 else None
+        run_settings.raise_exceptions = st.checkbox(t("raise_exceptions"), value=False)
 
-        with st.expander(t("observability")):
-            otel_enabled = st.checkbox(t("enable_tracing"), value=False)
-            if otel_enabled:
-                exporter_val = st.selectbox(
-                    t("exporter"),
-                    [e.value for e in ExporterType],
-                    index=0,
-                )
-                otlp_endpoint = st.text_input(
-                    t("otlp_endpoint"),
-                    value="http://localhost:4318",
-                    help=t("otlp_help"),
-                )
-                trace_content = st.checkbox(t("log_content"), value=True)
-                telemetry.config = TelemetryConfig(
-                    enabled=True,
-                    exporter=ExporterType(exporter_val),
-                    otlp_endpoint=otlp_endpoint,
-                    trace_llm_content=trace_content,
-                )
-                telemetry.init()
-            else:
-                telemetry.config.enabled = False
+    with st.expander(t("observability")):
+        otel_enabled = st.checkbox(t("enable_tracing"), value=False)
+        if otel_enabled:
+            exporter_val = st.selectbox(
+                t("exporter"),
+                [e.value for e in ExporterType],
+                index=0,
+            )
+            otlp_endpoint = st.text_input(
+                t("otlp_endpoint"),
+                value="http://localhost:4318",
+                help=t("otlp_help"),
+            )
+            trace_content = st.checkbox(t("log_content"), value=True)
+            telemetry.config = TelemetryConfig(
+                enabled=True,
+                exporter=ExporterType(exporter_val),
+                otlp_endpoint=otlp_endpoint,
+                trace_llm_content=trace_content,
+            )
+            telemetry.init()
+        else:
+            telemetry.config.enabled = False
 
     st.divider()
     st.caption(t("footer"))
@@ -498,9 +438,8 @@ if uploaded_file is not None:
             mime="text/csv",
         )
 
-        # Show telemetry summary if active
         event = results.get("event")
-        if event and is_advanced:
+        if event:
             with st.expander(t("telemetry_summary")):
                 st.json(
                     {

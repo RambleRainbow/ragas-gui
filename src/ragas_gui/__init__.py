@@ -3,7 +3,6 @@
 from ragas_gui.config import (
     METRIC_CATALOGUE,
     METRIC_REGISTRY,
-    QUICK_START_METRICS,
     MetricCategory,
     MetricInfo,
     get_metric_class,
@@ -29,8 +28,6 @@ from ragas_gui.llm_config import (
     test_llm_connection,
 )
 from ragas_gui.i18n import (
-    QUICK_START_PROVIDER_LABELS,
-    QUICK_START_PROVIDERS,
     SUPPORTED_LANGUAGES,
     get_language,
     set_language,
@@ -47,9 +44,6 @@ from ragas_gui.telemetry import (
 __all__ = [
     "METRIC_CATALOGUE",
     "METRIC_REGISTRY",
-    "QUICK_START_METRICS",
-    "QUICK_START_PROVIDER_LABELS",
-    "QUICK_START_PROVIDERS",
     "SUPPORTED_LANGUAGES",
     "CompatibilityMode",
     "EmbeddingConfig",

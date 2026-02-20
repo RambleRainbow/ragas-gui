@@ -43,14 +43,6 @@ class MetricInfo:
     description: str = ""
     init_kwargs: dict[str, Any] = field(default_factory=dict)
 
-    @property
-    def quick_start(self) -> bool:
-        """Whether this metric appears in Quick Start mode."""
-        return self.category in {
-            MetricCategory.RAG_CORE,
-            MetricCategory.RAG_CONTEXT,
-        }
-
 
 # ---------------------------------------------------------------------------
 # Full metric catalogue
@@ -294,13 +286,6 @@ METRIC_CATALOGUE: list[MetricInfo] = [
 
 # Legacy convenience dict (display_name -> MetricInfo)
 METRIC_REGISTRY: dict[str, MetricInfo] = {m.display_name: m for m in METRIC_CATALOGUE}
-
-# Quick Start defaults
-QUICK_START_METRICS: list[str] = [
-    m.display_name for m in METRIC_CATALOGUE if m.quick_start
-]
-
-# ---- Lazy import cache for metric classes ---------------------------------
 
 _METRICS_CACHE: dict[str, type] = {}
 
