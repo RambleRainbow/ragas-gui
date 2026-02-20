@@ -28,6 +28,7 @@ from ragas_gui.i18n import (
     t,
 )
 from ragas_gui.llm_config import (
+    DEFAULT_EMBEDDING_BASE_URLS,
     DEFAULT_EMBEDDING_MODELS,
     DEFAULT_MODELS,
     EmbeddingConfig,
@@ -63,19 +64,64 @@ if not st.session_state["settings_loaded"] and loaded_settings:
 
 telemetry: TelemetryManager = st.session_state["telemetry"]
 
+
+# Hidden input to receive localStorage data from JavaScript
+# This acts as a bridge between browser localStorage and Streamlit session state
+def on_settings_loaded():
+    """Callback when settings are loaded from localStorage."""
+    if st.session_state.get("settings_loader"):
+        try:
+            loaded = json.loads(st.session_state["settings_loader"])
+            if loaded and isinstance(loaded, dict):
+                st.session_state["saved_settings"] = loaded
+                st.session_state["settings_loaded"] = True
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+
+st.text_input(
+    "settings_loader",
+    key="settings_loader",
+    type="default",
+    label_visibility="collapsed",
+    on_change=on_settings_loaded,
+)
+
 if "load_triggered" not in st.session_state:
     st.session_state["load_triggered"] = True
 
     js = """
     <script>
+    function loadRagasSettings() {
         var saved = localStorage.getItem('ragas_gui_settings');
         if (saved) {
-            var settings = JSON.parse(saved);
-            window.parent.postMessage({
-                type: 'streamlit:setComponentValue',
-                value: settings
-            }, '*');
+            try {
+                var settings = JSON.parse(saved);
+                // Find the text input and set its value
+                var inputs = parent.document.querySelectorAll('input[data-testid="stTextInput"]');
+                for (var i = 0; i < inputs.length; i++) {
+                    var input = inputs[i];
+                    // Check if this is our settings_loader input by checking surrounding elements
+                    var parent = input.closest('.stTextInput');
+                    if (parent && parent.innerText === '') {
+                        // This is our hidden input
+                        input.value = saved;
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                        break;
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading settings:', e);
+            }
         }
+    }
+    // Wait for Streamlit to fully load
+    if (document.readyState === 'complete') {
+        loadRagasSettings();
+    } else {
+        window.addEventListener('load', loadRagasSettings);
+    }
     </script>
     """
     st.markdown(js, unsafe_allow_html=True)
@@ -131,6 +177,12 @@ with st.sidebar:
     saved_temperature = loaded_settings.get("temperature", 0.0)
     saved_api_key = loaded_settings.get("api_key", "")
 
+    # ---- Embeddings config (loaded from saved settings) --------------------
+    saved_emb_provider = loaded_settings.get("emb_provider", "openai")
+    saved_emb_base_url = loaded_settings.get("emb_base_url", "")
+    saved_emb_model = loaded_settings.get("emb_model", "")
+    saved_emb_api_key = loaded_settings.get("emb_api_key", "")
+
     if is_advanced:
         provider_options = [p.value for p in Provider]
         default_idx = (
@@ -178,14 +230,30 @@ with st.sidebar:
 
     # ---- Save Settings Button -----------------------------------------------
     if st.button("💾 Save Settings", key="save_settings_btn"):
+        # Determine provider value based on mode
+        provider_to_save = llm_provider if is_advanced else _label_to_val[qs_choice]
+
         settings = {
-            "provider": llm_provider,
+            "provider": provider_to_save,
             "model": llm_model,
             "base_url": llm_base_url,
             "temperature": llm_temperature,
             "api_key": api_key,
         }
+
+        # Add embeddings config if in advanced mode
+        if is_advanced:
+            settings.update(
+                {
+                    "emb_provider": emb_provider,
+                    "emb_base_url": emb_base_url,
+                    "emb_model": emb_model,
+                    "emb_api_key": emb_api_key,
+                }
+            )
+
         import json
+
         settings_json = json.dumps(settings)
         save_js = f"""
         <script>
@@ -216,24 +284,33 @@ with st.sidebar:
     if is_advanced:
         st.divider()
         st.subheader(t("embeddings"))
+        emb_provider_options = [p.value for p in EmbeddingProvider]
+        emb_default_idx = (
+            emb_provider_options.index(saved_emb_provider)
+            if saved_emb_provider in emb_provider_options
+            else 0
+        )
         emb_provider = st.selectbox(
             t("emb_provider"),
-            [p.value for p in EmbeddingProvider],
-            index=0,
+            emb_provider_options,
+            index=emb_default_idx,
         )
         emb_provider_enum = EmbeddingProvider(emb_provider)
         emb_base_url = st.text_input(
             t("emb_base_url"),
-            value=DEFAULT_EMBEDDING_MODELS.get(emb_provider_enum, ""),
+            value=saved_emb_base_url
+            or DEFAULT_EMBEDDING_BASE_URLS.get(emb_provider_enum, ""),
             help=t("emb_base_url_help"),
         )
         emb_model = st.text_input(
             t("emb_model"),
-            value=DEFAULT_EMBEDDING_MODELS.get(emb_provider_enum, ""),
+            value=saved_emb_model
+            or DEFAULT_EMBEDDING_MODELS.get(emb_provider_enum, ""),
         )
         emb_api_key = st.text_input(
             t("emb_api_key"),
             type="password",
+            value=saved_emb_api_key,
         )
         emb_cfg = EmbeddingConfig(
             provider=emb_provider_enum,

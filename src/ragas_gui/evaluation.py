@@ -28,7 +28,7 @@ from ragas_gui.telemetry import EvaluationEvent, TelemetryManager, TokenUsage
 
 # Ragas wrapper imports for langchain compatibility
 from ragas.embeddings import LangchainEmbeddingsWrapper
-from ragas.llms import LangchainLLMWrapper
+from ragas.llms import llm_factory
 
 
 def instantiate_metrics(
@@ -102,15 +102,42 @@ def run_evaluation(
     llm = build_llm(llm_cfg) if llm_cfg.is_configured else None
     embeddings = build_embeddings(emb_cfg) if emb_cfg.is_configured else None
 
-    # Wrap LLM and embeddings with ragas wrappers for collections metrics compatibility
-    wrapped_llm = LangchainLLMWrapper(llm) if llm is not None else None
+    # Use llm_factory for ragas metrics compatibility (instead of LangchainLLMWrapper)
+    # This fixes "Collections metrics only support modern InstructorLLM" error
+    from ragas.llms import llm_factory
+
+    # Determine provider from base_url
+    provider = "openai"  # default
+    if llm_cfg.base_url:
+        if "anthropic" in llm_cfg.base_url:
+            provider = "anthropic"
+        elif "google" in llm_cfg.base_url or "generativelanguage" in llm_cfg.base_url:
+            provider = "google"
+        elif "azure" in llm_cfg.base_url:
+            provider = "azure"
+
+    # Create ragas-compatible LLM using llm_factory
+    ragas_llm = None
+    if llm is not None:
+        # Get the client from the built LLM
+        client = getattr(llm, "client", None)
+        if client is None:
+            # Try to get the underlying client
+            client = getattr(llm, "_client", None)
+        ragas_llm = llm_factory(
+            model=llm_cfg.model_name,
+            provider=provider,
+            client=client,
+        )
+
+    # Wrap embeddings with ragas wrapper
     wrapped_embeddings = (
         LangchainEmbeddingsWrapper(embeddings) if embeddings is not None else None
     )
 
     run_config = build_run_config(run_settings)
     metrics = instantiate_metrics(
-        metric_infos, llm=wrapped_llm, embeddings=wrapped_embeddings
+        metric_infos, llm=ragas_llm, embeddings=wrapped_embeddings
     )
 
     ragas_ds = build_ragas_dataset(df)
@@ -137,8 +164,8 @@ def run_evaluation(
             "raise_exceptions": run_settings.raise_exceptions,
             "show_progress": run_settings.show_progress,
         }
-        if wrapped_llm is not None:
-            eval_kwargs["llm"] = wrapped_llm
+        if ragas_llm is not None:
+            eval_kwargs["llm"] = ragas_llm
         if wrapped_embeddings is not None:
             eval_kwargs["embeddings"] = wrapped_embeddings
         if run_settings.batch_size is not None:
