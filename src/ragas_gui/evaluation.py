@@ -164,6 +164,11 @@ def run_evaluation(
             "raise_exceptions": run_settings.raise_exceptions,
             "show_progress": run_settings.show_progress,
         }
+
+        # Debug: log metric types
+        if metrics:
+            print(f"DEBUG: metrics type = {[type(m).__name__ for m in metrics]}")
+
         if ragas_llm is not None:
             eval_kwargs["llm"] = ragas_llm
         if wrapped_embeddings is not None:
