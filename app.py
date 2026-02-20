@@ -228,6 +228,50 @@ with st.sidebar:
         help=t("api_key_help"),
     )
 
+    # ---- Embeddings config (rendered before Save Settings) --------------------
+    if is_advanced:
+        st.divider()
+        st.subheader(t("embeddings"))
+        emb_provider_options = [p.value for p in EmbeddingProvider]
+        emb_default_idx = (
+            emb_provider_options.index(saved_emb_provider)
+            if saved_emb_provider in emb_provider_options
+            else 0
+        )
+        emb_provider = st.selectbox(
+            t("emb_provider"),
+            emb_provider_options,
+            index=emb_default_idx,
+        )
+        emb_provider_enum = EmbeddingProvider(emb_provider)
+        emb_base_url = st.text_input(
+            t("emb_base_url"),
+            value=saved_emb_base_url
+            or DEFAULT_EMBEDDING_BASE_URLS.get(emb_provider_enum, ""),
+            help=t("emb_base_url_help"),
+        )
+        emb_model = st.text_input(
+            t("emb_model"),
+            value=saved_emb_model
+            or DEFAULT_EMBEDDING_MODELS.get(emb_provider_enum, ""),
+        )
+        emb_api_key = st.text_input(
+            t("emb_api_key"),
+            type="password",
+            value=saved_emb_api_key,
+        )
+        emb_cfg = EmbeddingConfig(
+            provider=emb_provider_enum,
+            base_url=emb_base_url,
+            model_name=emb_model,
+            api_key=emb_api_key or api_key,
+        )
+    else:
+        emb_cfg = EmbeddingConfig(
+            provider=EmbeddingProvider.OPENAI,
+            api_key=api_key,
+        )
+
     # ---- Save Settings Button -----------------------------------------------
     if st.button("💾 Save Settings", key="save_settings_btn"):
         # Determine provider value based on mode
@@ -281,48 +325,6 @@ with st.sidebar:
         else:
             st.error(t("connection_failed", error=message))
 
-    if is_advanced:
-        st.divider()
-        st.subheader(t("embeddings"))
-        emb_provider_options = [p.value for p in EmbeddingProvider]
-        emb_default_idx = (
-            emb_provider_options.index(saved_emb_provider)
-            if saved_emb_provider in emb_provider_options
-            else 0
-        )
-        emb_provider = st.selectbox(
-            t("emb_provider"),
-            emb_provider_options,
-            index=emb_default_idx,
-        )
-        emb_provider_enum = EmbeddingProvider(emb_provider)
-        emb_base_url = st.text_input(
-            t("emb_base_url"),
-            value=saved_emb_base_url
-            or DEFAULT_EMBEDDING_BASE_URLS.get(emb_provider_enum, ""),
-            help=t("emb_base_url_help"),
-        )
-        emb_model = st.text_input(
-            t("emb_model"),
-            value=saved_emb_model
-            or DEFAULT_EMBEDDING_MODELS.get(emb_provider_enum, ""),
-        )
-        emb_api_key = st.text_input(
-            t("emb_api_key"),
-            type="password",
-            value=saved_emb_api_key,
-        )
-        emb_cfg = EmbeddingConfig(
-            provider=emb_provider_enum,
-            base_url=emb_base_url,
-            model_name=emb_model,
-            api_key=emb_api_key or api_key,
-        )
-    else:
-        emb_cfg = EmbeddingConfig(
-            provider=EmbeddingProvider.OPENAI,
-            api_key=api_key,
-        )
 
     # Create LLM config
     llm_cfg = LLMConfig(
