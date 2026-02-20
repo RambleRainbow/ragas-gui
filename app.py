@@ -45,82 +45,60 @@ st.set_page_config(page_title=t("page_title"), page_icon="📊", layout="wide")
 if "telemetry" not in st.session_state:
     st.session_state["telemetry"] = TelemetryManager()
 
-if "saved_settings" not in st.session_state:
-    st.session_state["saved_settings"] = {}
+if "profiles" not in st.session_state:
+    st.session_state["profiles"] = {}
 
-if "settings_loaded" not in st.session_state:
-    st.session_state["settings_loaded"] = False
-
-import json
-
-loaded_settings = st.session_state.get("saved_settings", {})
-
-if not st.session_state["settings_loaded"] and loaded_settings:
-    st.session_state["settings_loaded"] = True
+if "current_profile" not in st.session_state:
+    st.session_state["current_profile"] = None
 
 telemetry: TelemetryManager = st.session_state["telemetry"]
 
 
-# Hidden input to receive localStorage data from JavaScript
-# This acts as a bridge between browser localStorage and Streamlit session state
-def on_settings_loaded():
-    """Callback when settings are loaded from localStorage."""
-    if st.session_state.get("settings_loader"):
+def on_profiles_loaded():
+    if st.session_state.get("profiles_loader"):
         try:
-            loaded = json.loads(st.session_state["settings_loader"])
+            loaded = json.loads(st.session_state["profiles_loader"])
             if loaded and isinstance(loaded, dict):
-                st.session_state["saved_settings"] = loaded
-                st.session_state["settings_loaded"] = True
+                st.session_state["profiles"] = loaded
         except (json.JSONDecodeError, TypeError):
             pass
 
 
 st.text_input(
-    "settings_loader",
-    key="settings_loader",
+    "profiles_loader",
+    key="profiles_loader",
     type="default",
     label_visibility="collapsed",
-    on_change=on_settings_loaded,
+    on_change=on_profiles_loaded,
 )
 
-if "load_triggered" not in st.session_state:
-    st.session_state["load_triggered"] = True
+if "init_triggered" not in st.session_state:
+    st.session_state["init_triggered"] = True
 
     js = """
     <script>
-    function loadRagasSettings() {
-        var saved = localStorage.getItem('ragas_gui_settings');
-        if (saved) {
-            try {
-                var settings = JSON.parse(saved);
-                // Find the text input and set its value
-                var inputs = parent.document.querySelectorAll('input[data-testid="stTextInput"]');
-                for (var i = 0; i < inputs.length; i++) {
-                    var input = inputs[i];
-                    // Check if this is our settings_loader input by checking surrounding elements
-                    var parent = input.closest('.stTextInput');
-                    if (parent && parent.innerText === '') {
-                        // This is our hidden input
-                        input.value = saved;
-                        input.dispatchEvent(new Event('input', { bubbles: true }));
-                        input.dispatchEvent(new Event('change', { bubbles: true }));
-                        break;
-                    }
+    (function() {
+        var profiles = localStorage.getItem('ragas_gui_profiles');
+        if (profiles) {
+            var inputs = parent.document.querySelectorAll('input[data-testid="stTextInput"]');
+            for (var i = 0; i < inputs.length; i++) {
+                var input = inputs[i];
+                var parentEl = input.closest('.stTextInput');
+                if (parentEl && parentEl.innerText === '') {
+                    input.value = profiles;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                    break;
                 }
-            } catch (e) {
-                console.error('Error loading settings:', e);
             }
         }
-    }
-    // Wait for Streamlit to fully load
-    if (document.readyState === 'complete') {
-        loadRagasSettings();
-    } else {
-        window.addEventListener('load', loadRagasSettings);
-    }
+    })();
     </script>
     """
     st.markdown(js, unsafe_allow_html=True)
+
+
+profiles = st.session_state.get("profiles", {})
 
 
 # ---------------------------------------------------------------------------
@@ -158,16 +136,34 @@ st.title(t("app_title"))
 with st.sidebar:
     st.header(t("sidebar_header"))
 
-    saved_provider = loaded_settings.get("provider", "openai")
-    saved_model = loaded_settings.get("model", "")
-    saved_base_url = loaded_settings.get("base_url", "")
-    saved_temperature = loaded_settings.get("temperature", 0.0)
-    saved_api_key = loaded_settings.get("api_key", "")
+    profile_names = list(profiles.keys())
+    selected_profile = st.selectbox(
+        t("load_profile"),
+        [""] + profile_names,
+        index=0,
+    )
 
-    saved_emb_provider = loaded_settings.get("emb_provider", "openai")
-    saved_emb_base_url = loaded_settings.get("emb_base_url", "")
-    saved_emb_model = loaded_settings.get("emb_model", "")
-    saved_emb_api_key = loaded_settings.get("emb_api_key", "")
+    if selected_profile and selected_profile in profiles:
+        loaded = profiles[selected_profile]
+        saved_provider = loaded.get("provider", "openai")
+        saved_model = loaded.get("model", "")
+        saved_base_url = loaded.get("base_url", "")
+        saved_temperature = loaded.get("temperature", 0.0)
+        saved_api_key = loaded.get("api_key", "")
+        saved_emb_provider = loaded.get("emb_provider", "openai")
+        saved_emb_base_url = loaded.get("emb_base_url", "")
+        saved_emb_model = loaded.get("emb_model", "")
+        saved_emb_api_key = loaded.get("emb_api_key", "")
+    else:
+        saved_provider = "openai"
+        saved_model = ""
+        saved_base_url = ""
+        saved_temperature = 0.0
+        saved_api_key = ""
+        saved_emb_provider = "openai"
+        saved_emb_base_url = ""
+        saved_emb_model = ""
+        saved_emb_api_key = ""
 
     provider_options = [p.value for p in Provider]
     default_idx = (
@@ -241,26 +237,51 @@ with st.sidebar:
         api_key=emb_api_key or api_key,
     )
 
-    if st.button("💾 Save Settings", key="save_settings_btn"):
-        settings = {
-            "provider": llm_provider,
-            "model": llm_model,
-            "base_url": llm_base_url,
-            "temperature": llm_temperature,
-            "api_key": api_key,
-            "emb_provider": emb_provider,
-            "emb_base_url": emb_base_url,
-            "emb_model": emb_model,
-            "emb_api_key": emb_api_key,
-        }
-        settings_json = json.dumps(settings)
-        save_js = f"""
-        <script>
-            localStorage.setItem('ragas_gui_settings', '{settings_json}');
-        </script>
-        """
-        st.markdown(save_js, unsafe_allow_html=True)
-        st.success("Settings saved!")
+    st.divider()
+    save_name = st.text_input(t("save_name"), value="")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("💾 " + t("save_settings"), key="save_settings_btn"):
+            if not save_name.strip():
+                st.error(t("save_name_required"))
+            else:
+                new_settings = {
+                    "provider": llm_provider,
+                    "model": llm_model,
+                    "base_url": llm_base_url,
+                    "temperature": llm_temperature,
+                    "api_key": api_key,
+                    "emb_provider": emb_provider,
+                    "emb_base_url": emb_base_url,
+                    "emb_model": emb_model,
+                    "emb_api_key": emb_api_key,
+                }
+                profiles[save_name.strip()] = new_settings
+                st.session_state["profiles"] = profiles
+                profiles_json = json.dumps(profiles)
+                save_js = f"""
+                <script>
+                    localStorage.setItem('ragas_gui_profiles', '{profiles_json}');
+                </script>
+                """
+                st.markdown(save_js, unsafe_allow_html=True)
+                st.success(t("settings_saved", name=save_name))
+
+    with col2:
+        if st.button("🗑️ " + t("delete_profile"), key="delete_profile_btn"):
+            if selected_profile and selected_profile in profiles:
+                del profiles[selected_profile]
+                st.session_state["profiles"] = profiles
+                profiles_json = json.dumps(profiles)
+                delete_js = f"""
+                <script>
+                    localStorage.setItem('ragas_gui_profiles', '{profiles_json}');
+                </script>
+                """
+                st.markdown(delete_js, unsafe_allow_html=True)
+                st.success(t("profile_deleted", name=selected_profile))
+                st.rerun()
 
     # ---- Test connection button --------------------------------------------
     if st.button(t("test_connection"), key="test_llm_conn"):

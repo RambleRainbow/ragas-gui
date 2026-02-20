@@ -42,6 +42,14 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "lang_label": "\U0001f310 Language",
         # Sidebar header
         "sidebar_header": "\U0001f517 Model Settings",
+        # Profile management
+        "load_profile": "Load Profile",
+        "save_name": "Profile Name",
+        "save_settings": "Save",
+        "delete_profile": "Delete",
+        "save_name_required": "Please enter a profile name.",
+        "settings_saved": "Profile '{name}' saved!",
+        "profile_deleted": "Profile '{name}' deleted!",
         # Provider & model
         "llm_provider": "LLM Provider",
         "llm_model": "Model",
@@ -131,6 +139,14 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "lang_label": "\U0001f310 语言",
         # 侧边栏标题
         "sidebar_header": "\U0001f517 模型设置",
+        # 配置文件管理
+        "load_profile": "加载配置",
+        "save_name": "配置名称",
+        "save_settings": "保存",
+        "delete_profile": "删除",
+        "save_name_required": "请输入配置名称。",
+        "settings_saved": "配置 '{name}' 已保存！",
+        "profile_deleted": "配置 '{name}' 已删除！",
         # 提供商和模型
         "llm_provider": "LLM 提供商",
         "llm_model": "模型",
