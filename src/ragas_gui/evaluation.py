@@ -26,6 +26,10 @@ from ragas_gui.llm_config import (
 )
 from ragas_gui.telemetry import EvaluationEvent, TelemetryManager, TokenUsage
 
+# Ragas wrapper imports for langchain compatibility
+from ragas.embeddings import LangchainEmbeddingsWrapper
+from ragas.llms import LangchainLLMWrapper
+
 
 def instantiate_metrics(
     metric_infos: list[MetricInfo],
@@ -97,8 +101,17 @@ def run_evaluation(
     # Build objects
     llm = build_llm(llm_cfg) if llm_cfg.is_configured else None
     embeddings = build_embeddings(emb_cfg) if emb_cfg.is_configured else None
+
+    # Wrap LLM and embeddings with ragas wrappers for collections metrics compatibility
+    wrapped_llm = LangchainLLMWrapper(llm) if llm is not None else None
+    wrapped_embeddings = (
+        LangchainEmbeddingsWrapper(embeddings) if embeddings is not None else None
+    )
+
     run_config = build_run_config(run_settings)
-    metrics = instantiate_metrics(metric_infos, llm=llm, embeddings=embeddings)
+    metrics = instantiate_metrics(
+        metric_infos, llm=wrapped_llm, embeddings=wrapped_embeddings
+    )
 
     ragas_ds = build_ragas_dataset(df)
 
@@ -107,7 +120,7 @@ def run_evaluation(
         run_id=uuid.uuid4().hex[:12],
         dataset_rows=len(df),
         metrics=[m.display_name for m in metric_infos],
-        model=llm_cfg.model,
+        model=llm_cfg.model_name,
     )
 
     ctx = (
@@ -124,10 +137,10 @@ def run_evaluation(
             "raise_exceptions": run_settings.raise_exceptions,
             "show_progress": run_settings.show_progress,
         }
-        if llm is not None:
-            eval_kwargs["llm"] = llm
-        if embeddings is not None:
-            eval_kwargs["embeddings"] = embeddings
+        if wrapped_llm is not None:
+            eval_kwargs["llm"] = wrapped_llm
+        if wrapped_embeddings is not None:
+            eval_kwargs["embeddings"] = wrapped_embeddings
         if run_settings.batch_size is not None:
             eval_kwargs["batch_size"] = run_settings.batch_size
         if run_settings.column_map:

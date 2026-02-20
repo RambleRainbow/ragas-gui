@@ -48,7 +48,37 @@ st.set_page_config(page_title=t("page_title"), page_icon="📊", layout="wide")
 if "telemetry" not in st.session_state:
     st.session_state["telemetry"] = TelemetryManager()
 
+if "saved_settings" not in st.session_state:
+    st.session_state["saved_settings"] = {}
+
+if "settings_loaded" not in st.session_state:
+    st.session_state["settings_loaded"] = False
+
+import json
+
+loaded_settings = st.session_state.get("saved_settings", {})
+
+if not st.session_state["settings_loaded"] and loaded_settings:
+    st.session_state["settings_loaded"] = True
+
 telemetry: TelemetryManager = st.session_state["telemetry"]
+
+if "load_triggered" not in st.session_state:
+    st.session_state["load_triggered"] = True
+
+    js = """
+    <script>
+        var saved = localStorage.getItem('ragas_gui_settings');
+        if (saved) {
+            var settings = JSON.parse(saved);
+            window.parent.postMessage({
+                type: 'streamlit:setComponentValue',
+                value: settings
+            }, '*');
+        }
+    </script>
+    """
+    st.markdown(js, unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
@@ -95,27 +125,39 @@ with st.sidebar:
     st.header(t("sidebar_header"))
 
     # ---- Provider selection (available in BOTH modes) ---------------------
+    saved_provider = loaded_settings.get("provider", "openai")
+    saved_model = loaded_settings.get("model", "")
+    saved_base_url = loaded_settings.get("base_url", "")
+    saved_temperature = loaded_settings.get("temperature", 0.0)
+    saved_api_key = loaded_settings.get("api_key", "")
+
     if is_advanced:
+        provider_options = [p.value for p in Provider]
+        default_idx = (
+            provider_options.index(saved_provider)
+            if saved_provider in provider_options
+            else 0
+        )
         llm_provider = st.selectbox(
             t("llm_provider"),
-            [p.value for p in Provider],
-            index=0,
+            provider_options,
+            index=default_idx,
         )
         llm_provider_enum = Provider(llm_provider)
         llm_base_url = st.text_input(
             t("base_url"),
-            value=DEFAULT_MODELS.get(llm_provider_enum, ""),
+            value=saved_base_url or DEFAULT_MODELS.get(llm_provider_enum, ""),
             help=t("base_url_help"),
         )
         llm_model = st.text_input(
             t("llm_model"),
-            value=DEFAULT_MODELS.get(llm_provider_enum, ""),
+            value=saved_model or DEFAULT_MODELS.get(llm_provider_enum, ""),
         )
         llm_temperature = st.slider(
             t("temperature"),
             0.0,
             2.0,
-            0.0,
+            saved_temperature,
             0.05,
         )
     else:
@@ -123,15 +165,35 @@ with st.sidebar:
         qs_choice = st.selectbox(t("provider"), qs_labels, index=0)
         _label_to_val = {v: k for k, v in QUICK_START_PROVIDER_LABELS.items()}
         llm_provider_enum = Provider(_label_to_val[qs_choice])
-        llm_base_url = DEFAULT_MODELS.get(llm_provider_enum, "")
-        llm_model = DEFAULT_MODELS.get(llm_provider_enum, "")
-        llm_temperature = 0.0
+        llm_base_url = saved_base_url or DEFAULT_MODELS.get(llm_provider_enum, "")
+        llm_model = saved_model or DEFAULT_MODELS.get(llm_provider_enum, "")
+        llm_temperature = saved_temperature
 
     api_key = st.text_input(
         t("api_key"),
         type="password",
+        value=saved_api_key,
         help=t("api_key_help"),
     )
+
+    # ---- Save Settings Button -----------------------------------------------
+    if st.button("💾 Save Settings", key="save_settings_btn"):
+        settings = {
+            "provider": llm_provider,
+            "model": llm_model,
+            "base_url": llm_base_url,
+            "temperature": llm_temperature,
+            "api_key": api_key,
+        }
+        import json
+        settings_json = json.dumps(settings)
+        save_js = f"""
+        <script>
+            localStorage.setItem('ragas_gui_settings', '{settings_json}');
+        </script>
+        """
+        st.markdown(save_js, unsafe_allow_html=True)
+        st.success("Settings saved!")
 
     # ---- Test connection button --------------------------------------------
     if st.button(t("test_connection"), key="test_llm_conn"):
