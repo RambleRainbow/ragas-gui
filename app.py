@@ -7,9 +7,6 @@ Run with:
 import os
 import sys
 
-# Ensure src/ is in the path for local imports
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
-
 import pandas as pd
 import plotly.express as px
 import streamlit as st
