@@ -3,6 +3,8 @@
 Provides dataclass-based configuration that the UI can serialise to/from
 Streamlit session state, and factory helpers that create the objects Ragas
 ``evaluate()`` expects.
+
+This module uses OpenAI-compatible mode for all providers.
 """
 
 from __future__ import annotations
@@ -12,60 +14,74 @@ from enum import Enum
 from typing import Any
 
 # ---------------------------------------------------------------------------
-# Supported providers
+# Supported providers (OpenAI compatible mode only)
 # ---------------------------------------------------------------------------
 
 
-class LLMProvider(str, Enum):
+class Provider(str, Enum):
+    """Known LLM providers with OpenAI-compatible API endpoints."""
+
+    OLLAMA = "ollama"
+    VLLM = "vllm"
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE = "google"
-    AZURE_OPENAI = "azure_openai"
-    LITELLM = "litellm"
+    AZURE = "azure"
+    CUSTOM = "custom"
 
 
 class EmbeddingProvider(str, Enum):
+    """Embedding provider types."""
+
+    OLLAMA = "ollama"
+    VLLM = "vllm"
     OPENAI = "openai"
-    GOOGLE = "google"
     HUGGINGFACE = "huggingface"
-    LITELLM = "litellm"
-
-
-class CompatibilityMode(str, Enum):
-    """Controls which LLM client is used when connecting to custom endpoints.
-
-    ``NONE``
-        Use the native client for the selected provider (default).
-    ``OPENAI_COMPATIBLE``
-        Force ``ChatOpenAI`` with a custom ``base_url`` – works with Ollama,
-        vLLM, LocalAI, and any server exposing an OpenAI-compatible API.
-    ``ANTHROPIC_COMPATIBLE``
-        Force ``ChatAnthropic`` with a custom API URL – works with proxies
-        that expose an Anthropic-compatible API.
-    """
-
-    NONE = "none"
-    OPENAI_COMPATIBLE = "openai_compatible"
-    ANTHROPIC_COMPATIBLE = "anthropic_compatible"
+    CUSTOM = "custom"
 
 
 # ---------------------------------------------------------------------------
-# Default model names per provider
+# Default configuration per provider
 # ---------------------------------------------------------------------------
 
-DEFAULT_MODELS: dict[LLMProvider, str] = {
-    LLMProvider.OPENAI: "gpt-4o-mini",
-    LLMProvider.ANTHROPIC: "claude-3-5-sonnet-latest",
-    LLMProvider.GOOGLE: "gemini-2.0-flash",
-    LLMProvider.AZURE_OPENAI: "gpt-4o-mini",
-    LLMProvider.LITELLM: "gpt-4o-mini",
+# Default base URLs for each provider
+DEFAULT_BASE_URLS: dict[Provider, str] = {
+    Provider.OLLAMA: "http://localhost:11434/v1",
+    Provider.VLLM: "http://localhost:8000/v1",
+    Provider.OPENAI: "https://api.openai.com/v1",
+    Provider.ANTHROPIC: "https://api.anthropic.com/v1",
+    Provider.GOOGLE: "https://generativelanguage.googleapis.com/v1",
+    Provider.AZURE: "https://{resource-name}.openai.azure.com",
+    Provider.CUSTOM: "",
 }
 
+# Default model names per provider
+DEFAULT_MODELS: dict[Provider, str] = {
+    Provider.OLLAMA: "llama3.1",
+    Provider.VLLM: "llama3.1",
+    Provider.OPENAI: "gpt-4o-mini",
+    Provider.ANTHROPIC: "claude-3-5-sonnet-latest",
+    Provider.GOOGLE: "gemini-2.0-flash",
+    Provider.AZURE: "gpt-4o-mini",
+    Provider.CUSTOM: "",
+}
+
+# Default embedding base URLs
+DEFAULT_EMBEDDING_BASE_URLS: dict[EmbeddingProvider, str] = {
+    EmbeddingProvider.OLLAMA: "http://localhost:11434/v1",
+    EmbeddingProvider.VLLM: "http://localhost:8000/v1",
+    EmbeddingProvider.OPENAI: "https://api.openai.com/v1",
+    EmbeddingProvider.HUGGINGFACE: "",
+    EmbeddingProvider.CUSTOM: "",
+}
+
+# Default embedding models per provider
 DEFAULT_EMBEDDING_MODELS: dict[EmbeddingProvider, str] = {
+    EmbeddingProvider.OLLAMA: "nomic-embed-text",
+    EmbeddingProvider.VLLM: "nomic-embed-text",
     EmbeddingProvider.OPENAI: "text-embedding-3-small",
-    EmbeddingProvider.GOOGLE: "text-embedding-004",
     EmbeddingProvider.HUGGINGFACE: "sentence-transformers/all-MiniLM-L6-v2",
-    EmbeddingProvider.LITELLM: "text-embedding-3-small",
+    EmbeddingProvider.CUSTOM: "",
 }
 
 
@@ -76,44 +92,60 @@ DEFAULT_EMBEDDING_MODELS: dict[EmbeddingProvider, str] = {
 
 @dataclass
 class LLMConfig:
-    """Configuration for the evaluator LLM."""
+    """Configuration for the evaluator LLM.
 
-    provider: LLMProvider = LLMProvider.OPENAI
-    model: str = ""
+    All providers use OpenAI-compatible mode with base_url and model_name.
+    """
+
+    provider: Provider = Provider.OPENAI
+    base_url: str = ""
+    model_name: str = ""
     api_key: str = ""
-    api_base: str = ""
-    compatibility_mode: CompatibilityMode = CompatibilityMode.NONE
     temperature: float = 0.0
     max_tokens: int | None = None
     system_prompt: str = ""
 
     def __post_init__(self) -> None:
-        if not self.model:
-            self.model = DEFAULT_MODELS.get(self.provider, "gpt-4o-mini")
+        # Set defaults if not provided
+        if not self.base_url:
+            self.base_url = DEFAULT_BASE_URLS.get(self.provider, "")
+        if not self.model_name:
+            self.model_name = DEFAULT_MODELS.get(self.provider, "gpt-4o-mini")
 
     @property
     def is_configured(self) -> bool:
-        return bool(self.api_key)
+        """Check if the provider is properly configured."""
+        return bool(self.api_key) or self.provider in (Provider.OLLAMA, Provider.VLLM)
 
 
 @dataclass
 class EmbeddingConfig:
-    """Configuration for the embeddings model."""
+    """Configuration for the embeddings model.
+
+    All providers use OpenAI-compatible mode with base_url and model_name.
+    """
 
     provider: EmbeddingProvider = EmbeddingProvider.OPENAI
-    model: str = ""
+    base_url: str = ""
+    model_name: str = ""
     api_key: str = ""
-    api_base: str = ""
 
     def __post_init__(self) -> None:
-        if not self.model:
-            self.model = DEFAULT_EMBEDDING_MODELS.get(
+        # Set defaults if not provided
+        if not self.base_url:
+            self.base_url = DEFAULT_EMBEDDING_BASE_URLS.get(self.provider, "")
+        if not self.model_name:
+            self.model_name = DEFAULT_EMBEDDING_MODELS.get(
                 self.provider, "text-embedding-3-small"
             )
 
     @property
     def is_configured(self) -> bool:
-        return bool(self.api_key)
+        """Check if the provider is properly configured."""
+        return bool(self.api_key) or self.provider in (
+            EmbeddingProvider.OLLAMA,
+            EmbeddingProvider.VLLM,
+        )
 
 
 @dataclass
@@ -138,131 +170,49 @@ class RunSettings:
 
 
 def build_llm(cfg: LLMConfig) -> Any:
-    """Create a Ragas-compatible LLM wrapper from *cfg*."""
+    """Create a Ragas-compatible LLM wrapper from *cfg*.
+
+    All providers use OpenAI-compatible mode via ChatOpenAI.
+    """
     import os
 
-    # --- Compatibility-mode overrides take precedence -----------------------
-    if cfg.compatibility_mode == CompatibilityMode.OPENAI_COMPATIBLE:
-        os.environ.setdefault("OPENAI_API_KEY", cfg.api_key or "no-key")
-        from langchain_openai import ChatOpenAI
-
-        kwargs: dict[str, Any] = {
-            "model": cfg.model,
-            "temperature": cfg.temperature,
-            "api_key": cfg.api_key or "no-key",
-        }
-        if cfg.max_tokens:
-            kwargs["max_tokens"] = cfg.max_tokens
-        if cfg.api_base:
-            kwargs["base_url"] = cfg.api_base
-        return ChatOpenAI(**kwargs)
-
-    if cfg.compatibility_mode == CompatibilityMode.ANTHROPIC_COMPATIBLE:
-        os.environ.setdefault("ANTHROPIC_API_KEY", cfg.api_key)
-        from langchain_anthropic import ChatAnthropic
-
-        kwargs = {
-            "model": cfg.model,
-            "temperature": cfg.temperature,
-        }
-        if cfg.max_tokens:
-            kwargs["max_tokens"] = cfg.max_tokens
-        if cfg.api_base:
-            kwargs["anthropic_api_url"] = cfg.api_base
-        return ChatAnthropic(**kwargs)
-
-    # --- Native provider paths ----------------------------------------------
-    if cfg.provider == LLMProvider.OPENAI:
-        os.environ.setdefault("OPENAI_API_KEY", cfg.api_key)
-        from langchain_openai import ChatOpenAI
-
-        kwargs = {
-            "model": cfg.model,
-            "temperature": cfg.temperature,
-        }
-        if cfg.max_tokens:
-            kwargs["max_tokens"] = cfg.max_tokens
-        if cfg.api_base:
-            kwargs["base_url"] = cfg.api_base
-        return ChatOpenAI(**kwargs)
-
-    if cfg.provider == LLMProvider.AZURE_OPENAI:
-        os.environ.setdefault("AZURE_OPENAI_API_KEY", cfg.api_key)
-        from langchain_openai import AzureChatOpenAI
-
-        return AzureChatOpenAI(
-            model=cfg.model,
-            temperature=cfg.temperature,
-            azure_endpoint=cfg.api_base,
-        )
-
-    if cfg.provider == LLMProvider.ANTHROPIC:
-        os.environ.setdefault("ANTHROPIC_API_KEY", cfg.api_key)
-        from langchain_anthropic import ChatAnthropic
-
-        kwargs = {
-            "model": cfg.model,
-            "temperature": cfg.temperature,
-        }
-        if cfg.max_tokens:
-            kwargs["max_tokens"] = cfg.max_tokens
-        if cfg.api_base:
-            kwargs["anthropic_api_url"] = cfg.api_base
-        return ChatAnthropic(**kwargs)
-
-    if cfg.provider == LLMProvider.GOOGLE:
-        os.environ.setdefault("GOOGLE_API_KEY", cfg.api_key)
-        from langchain_google_genai import ChatGoogleGenerativeAI
-
-        kwargs = {
-            "model": cfg.model,
-            "temperature": cfg.temperature,
-        }
-        if cfg.max_tokens:
-            kwargs["max_output_tokens"] = cfg.max_tokens
-        return ChatGoogleGenerativeAI(**kwargs)
-
-    # LiteLLM and unknown providers: fall back to ChatOpenAI
-    os.environ.setdefault("OPENAI_API_KEY", cfg.api_key)
+    os.environ.setdefault("OPENAI_API_KEY", cfg.api_key or "no-key")
     from langchain_openai import ChatOpenAI
 
-    kwargs = {"model": cfg.model, "temperature": cfg.temperature}
-    if cfg.api_base:
-        kwargs["base_url"] = cfg.api_base
+    kwargs: dict[str, Any] = {
+        "model": cfg.model_name,
+        "temperature": cfg.temperature,
+        "api_key": cfg.api_key or "no-key",
+    }
+    if cfg.max_tokens:
+        kwargs["max_tokens"] = cfg.max_tokens
+    if cfg.base_url:
+        kwargs["base_url"] = cfg.base_url
+
     return ChatOpenAI(**kwargs)
 
 
 def build_embeddings(cfg: EmbeddingConfig) -> Any:
-    """Create a Ragas-compatible embeddings wrapper from *cfg*."""
+    """Create a Ragas-compatible embeddings wrapper from *cfg*.
+
+    OpenAI-compatible providers use OpenAIEmbeddings.
+    HuggingFace uses its own embeddings.
+    """
     import os
-
-    if cfg.provider == EmbeddingProvider.OPENAI:
-        os.environ.setdefault("OPENAI_API_KEY", cfg.api_key)
-        from langchain_openai import OpenAIEmbeddings
-
-        kwargs: dict[str, Any] = {"model": cfg.model}
-        if cfg.api_base:
-            kwargs["base_url"] = cfg.api_base
-        return OpenAIEmbeddings(**kwargs)
-
-    if cfg.provider == EmbeddingProvider.GOOGLE:
-        os.environ.setdefault("GOOGLE_API_KEY", cfg.api_key)
-        from langchain_google_genai import GoogleGenerativeAIEmbeddings
-
-        return GoogleGenerativeAIEmbeddings(model=cfg.model)
 
     if cfg.provider == EmbeddingProvider.HUGGINGFACE:
         from langchain_community.embeddings import HuggingFaceEmbeddings
 
-        return HuggingFaceEmbeddings(model_name=cfg.model)
+        return HuggingFaceEmbeddings(model_name=cfg.model_name)
 
-    # LiteLLM / fallback → OpenAI-compatible
-    os.environ.setdefault("OPENAI_API_KEY", cfg.api_key)
+    # All other providers use OpenAI-compatible mode
+    os.environ.setdefault("OPENAI_API_KEY", cfg.api_key or "no-key")
     from langchain_openai import OpenAIEmbeddings
 
-    kwargs = {"model": cfg.model}
-    if cfg.api_base:
-        kwargs["base_url"] = cfg.api_base
+    kwargs: dict[str, Any] = {"model": cfg.model_name}
+    if cfg.base_url:
+        kwargs["base_url"] = cfg.base_url
+
     return OpenAIEmbeddings(**kwargs)
 
 
@@ -277,3 +227,74 @@ def build_run_config(settings: RunSettings) -> Any:
         max_workers=settings.max_workers,
         seed=settings.seed,
     )
+
+
+# ---------------------------------------------------------------------------
+# Connection testing
+# ---------------------------------------------------------------------------
+
+
+async def test_llm_connection(cfg: LLMConfig) -> tuple[bool, str]:
+    """Test if the LLM provider is reachable.
+
+    Returns:
+        Tuple of (success: bool, message: str)
+    """
+    import os
+
+    try:
+        os.environ.setdefault("OPENAI_API_KEY", cfg.api_key or "no-key")
+        from langchain_openai import ChatOpenAI
+
+        client = ChatOpenAI(
+            model=cfg.model_name,
+            api_key=cfg.api_key if cfg.api_key else None,  # type: ignore[arg-type]
+            base_url=cfg.base_url if cfg.base_url else None,
+            temperature=0,
+        )
+
+        # Simple test - just try to get a response
+        await client.ainvoke("Hi")
+
+        return True, "Connection successful"
+    except Exception as e:
+        return False, str(e)
+
+
+async def test_embedding_connection(cfg: EmbeddingConfig) -> tuple[bool, str]:
+    """Test if the embedding provider is reachable.
+
+    Returns:
+        Tuple of (success: bool, message: str)
+    """
+    import os
+
+    try:
+        if cfg.provider == EmbeddingProvider.HUGGINGFACE:
+            from langchain_community.embeddings import HuggingFaceEmbeddings
+
+            emb = HuggingFaceEmbeddings(model_name=cfg.model_name)
+            _ = emb.embed_query("test")
+            return True, "Connection successful"
+
+        os.environ.setdefault("OPENAI_API_KEY", cfg.api_key or "no-key")
+        from langchain_openai import OpenAIEmbeddings
+
+        emb = OpenAIEmbeddings(
+            model=cfg.model_name,
+            base_url=cfg.base_url if cfg.base_url else None,
+        )
+        _ = emb.embed_query("test")
+        return True, "Connection successful"
+    except Exception as e:
+        return False, str(e)
+
+
+# ---------------------------------------------------------------------------
+# Legacy aliases for backwards compatibility
+# ---------------------------------------------------------------------------
+
+# Keep old names as aliases for backwards compatibility
+LLMProvider = Provider
+EmbeddingProvider = EmbeddingProvider
+CompatibilityMode = None  # Deprecated - not used anymore

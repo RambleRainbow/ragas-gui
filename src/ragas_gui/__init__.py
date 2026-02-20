@@ -18,12 +18,15 @@ from ragas_gui.data import (
 )
 from ragas_gui.evaluation import run_evaluation
 from ragas_gui.llm_config import (
-    CompatibilityMode,
+    DEFAULT_EMBEDDING_MODELS,
+    DEFAULT_MODELS,
     EmbeddingConfig,
     EmbeddingProvider,
     LLMConfig,
-    LLMProvider,
+    Provider,
     RunSettings,
+    test_embedding_connection,
+    test_llm_connection,
 )
 from ragas_gui.i18n import (
     QUICK_START_PROVIDER_LABELS,

@@ -33,12 +33,12 @@ from ragas_gui.i18n import (
 from ragas_gui.llm_config import (
     DEFAULT_EMBEDDING_MODELS,
     DEFAULT_MODELS,
-    CompatibilityMode,
     EmbeddingConfig,
     EmbeddingProvider,
     LLMConfig,
-    LLMProvider,
+    Provider,
     RunSettings,
+    test_llm_connection,
 )
 from ragas_gui.telemetry import (
     ExporterType,
@@ -101,13 +101,18 @@ with st.sidebar:
     if is_advanced:
         llm_provider = st.selectbox(
             t("llm_provider"),
-            [p.value for p in LLMProvider],
+            [p.value for p in Provider],
             index=0,
         )
-        llm_provider_enum = LLMProvider(llm_provider)
+        llm_provider_enum = Provider(llm_provider)
+        llm_base_url = st.text_input(
+            t("base_url"),
+            value=DEFAULT_MODELS.get(llm_provider_enum, ""),
+            help=t("base_url_help"),
+        )
         llm_model = st.text_input(
             t("llm_model"),
-            value=DEFAULT_MODELS[llm_provider_enum],
+            value=DEFAULT_MODELS.get(llm_provider_enum, ""),
         )
         llm_temperature = st.slider(
             t("temperature"),
@@ -120,8 +125,9 @@ with st.sidebar:
         qs_labels = [QUICK_START_PROVIDER_LABELS[p] for p in QUICK_START_PROVIDERS]
         qs_choice = st.selectbox(t("provider"), qs_labels, index=0)
         _label_to_val = {v: k for k, v in QUICK_START_PROVIDER_LABELS.items()}
-        llm_provider_enum = LLMProvider(_label_to_val[qs_choice])
-        llm_model = DEFAULT_MODELS[llm_provider_enum]
+        llm_provider_enum = Provider(_label_to_val[qs_choice])
+        llm_base_url = DEFAULT_MODELS.get(llm_provider_enum, "")
+        llm_model = DEFAULT_MODELS.get(llm_provider_enum, "")
         llm_temperature = 0.0
 
     api_key = st.text_input(
@@ -130,40 +136,23 @@ with st.sidebar:
         help=t("api_key_help"),
     )
 
-    if is_advanced:
-        with st.expander(t("advanced_connection"), expanded=False):
-            llm_api_base = st.text_input(
-                t("api_base_url"),
-                value="",
-                help=t("api_base_help"),
-            )
+    # ---- Test connection button --------------------------------------------
+    if st.button(t("test_connection"), key="test_llm_conn"):
+        llm_test_cfg = LLMConfig(
+            provider=llm_provider_enum,
+            base_url=llm_base_url,
+            model_name=llm_model,
+            api_key=api_key,
+            temperature=llm_temperature,
+        )
+        with st.spinner(t("testing_connection")):
+            import asyncio
 
-            compat_labels = {
-                CompatibilityMode.NONE: t("compat_none"),
-                CompatibilityMode.OPENAI_COMPATIBLE: t("compat_openai"),
-                CompatibilityMode.ANTHROPIC_COMPATIBLE: t("compat_anthropic"),
-            }
-            compat_selection = st.selectbox(
-                t("compat_mode"),
-                list(compat_labels.values()),
-                index=0,
-                help=t("compat_help"),
-            )
-            compat_mode = next(
-                k for k, v in compat_labels.items() if v == compat_selection
-            )
-    else:
-        compat_mode = CompatibilityMode.NONE
-        llm_api_base = ""
-
-    llm_cfg = LLMConfig(
-        provider=llm_provider_enum,
-        model=llm_model,
-        api_key=api_key,
-        api_base=llm_api_base,
-        compatibility_mode=compat_mode,
-        temperature=llm_temperature,
-    )
+            success, message = asyncio.run(test_llm_connection(llm_test_cfg))
+        if success:
+            st.success(t("connection_success"))
+        else:
+            st.error(t("connection_failed", error=message))
 
     if is_advanced:
         st.divider()
@@ -174,30 +163,39 @@ with st.sidebar:
             index=0,
         )
         emb_provider_enum = EmbeddingProvider(emb_provider)
+        emb_base_url = st.text_input(
+            t("emb_base_url"),
+            value=DEFAULT_EMBEDDING_MODELS.get(emb_provider_enum, ""),
+            help=t("emb_base_url_help"),
+        )
         emb_model = st.text_input(
             t("emb_model"),
-            value=DEFAULT_EMBEDDING_MODELS[emb_provider_enum],
+            value=DEFAULT_EMBEDDING_MODELS.get(emb_provider_enum, ""),
         )
         emb_api_key = st.text_input(
             t("emb_api_key"),
             type="password",
         )
-        emb_api_base = st.text_input(
-            t("emb_api_base"),
-            value="",
-            help=t("emb_api_base_help"),
-        )
         emb_cfg = EmbeddingConfig(
             provider=emb_provider_enum,
-            model=emb_model,
+            base_url=emb_base_url,
+            model_name=emb_model,
             api_key=emb_api_key or api_key,
-            api_base=emb_api_base,
         )
     else:
         emb_cfg = EmbeddingConfig(
             provider=EmbeddingProvider.OPENAI,
             api_key=api_key,
         )
+
+    # Create LLM config
+    llm_cfg = LLMConfig(
+        provider=llm_provider_enum,
+        base_url=llm_base_url,
+        model_name=llm_model,
+        api_key=api_key,
+        temperature=llm_temperature,
+    )
 
     # ---- Metrics selection ------------------------------------------------
     st.divider()

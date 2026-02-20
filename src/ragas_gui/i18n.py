@@ -54,7 +54,6 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "provider": "Provider",
         "llm_model": "Model",
         "temperature": "Temperature",
-        # Connection
         "api_key": "API Key",
         "api_key_help": "Required by Ragas for LLM-based metrics.",
         "api_base_url": "API Base URL",
@@ -64,6 +63,12 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "http://localhost:8000/v1 (vLLM), "
             "https://your-azure.openai.azure.com/"
         ),
+        "base_url": "Base URL",
+        "base_url_help": "Custom endpoint for the LLM API.",
+        "test_connection": "Test Connection",
+        "testing_connection": "Testing connection...",
+        "connection_success": "Connection successful!",
+        "connection_failed": "Connection failed: {error}",
         # Compatibility (advanced connection)
         "advanced_connection": "Advanced Connection",
         "compat_mode": "Compatibility Mode",
@@ -84,6 +89,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "emb_api_base_help": (
             "Custom endpoint for embeddings (e.g. http://localhost:11434/v1)."
         ),
+        "emb_base_url": "Embedding Base URL",
+        "emb_base_url_help": "Custom endpoint for the embedding API.",
         # Metrics
         "metrics": "Metrics",
         # Runtime settings
@@ -149,24 +156,29 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "\u9ad8\u7ea7\u6a21\u5f0f\uff1a\u5b8c\u5168\u63a7\u5236\u3002"
         ),
         # 语言
-        "lang_label": "\U0001f310 \u8bed\u8a00",
+        "lang_label": "\U0001f310 语言",
         # 侧边栏标题
-        "sidebar_header": "\U0001f517 \u6a21\u578b\u8bbe\u7f6e",
+        "sidebar_header": "\U0001f517 模型设置",
         # 提供商和模型
-        "llm_provider": "LLM \u63d0\u4f9b\u5546",
-        "provider": "\u63d0\u4f9b\u5546",
-        "llm_model": "\u6a21\u578b",
-        "temperature": "\u6e29\u5ea6",
-        # 连接
-        "api_key": "API \u5bc6\u94a5",
-        "api_key_help": "Ragas \u7684 LLM \u6307\u6807\u9700\u8981\u6b64\u5bc6\u94a5\u3002",
-        "api_base_url": "API \u57fa\u7840 URL",
+        "llm_provider": "LLM 提供商",
+        "provider": "提供商",
+        "llm_model": "模型",
+        "temperature": "温度",
+        "api_key": "API 密钥",
+        "api_key_help": "Ragas 的 LLM 指标需要此密钥。",
+        "api_base_url": "API 基础 URL",
         "api_base_help": (
-            "\u81ea\u5b9a\u4e49 API \u7aef\u70b9\u3002\u793a\u4f8b\uff1a"
-            "http://localhost:11434/v1 (Ollama)\uff0c"
-            "http://localhost:8000/v1 (vLLM)\uff0c"
+            "自定义 API 端点。示例："
+            "http://localhost:11434/v1 (Ollama)，"
+            "http://localhost:8000/v1 (vLLM)，"
             "https://your-azure.openai.azure.com/"
         ),
+        "base_url": "基础 URL",
+        "base_url_help": "LLM API 的自定义端点。",
+        "test_connection": "测试连接",
+        "testing_connection": "正在测试连接...",
+        "connection_success": "连接成功！",
+        "connection_failed": "连接失败：{error}",
         # 兼容模式（高级连接）
         "advanced_connection": "\u9ad8\u7ea7\u8fde\u63a5",
         "compat_mode": "\u517c\u5bb9\u6a21\u5f0f",
@@ -192,6 +204,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "emb_api_base_help": (
             "\u5d4c\u5165\u7684\u81ea\u5b9a\u4e49\u7aef\u70b9"
             "\uff08\u4f8b\u5982 http://localhost:11434/v1\uff09\u3002"
+        ),
+        "emb_base_url": "\u5d4c\u5165\u57fa\u7840 URL",
+        "emb_base_url_help": (
+            "\u5d4c\u5165 API \u7684\u81ea\u5b9a\u4e49\u7aef\u70b9\u3002"
         ),
         # 指标
         "metrics": "\u8bc4\u4f30\u6307\u6807",
