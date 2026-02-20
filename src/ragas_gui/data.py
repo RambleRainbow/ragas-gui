@@ -55,12 +55,19 @@ def validate_columns(df: pd.DataFrame) -> list[str]:
 
 
 def build_ragas_dataset(df: pd.DataFrame) -> Dataset:
-    """Convert a validated DataFrame into a Ragas-compatible HF Dataset."""
+    """Convert a validated DataFrame into a Ragas-compatible HF Dataset.
+
+    Note: ragas 0.4+ uses new column names:
+      - user_input (was question)
+      - response (was answer)
+      - retrieved_contexts (was contexts)
+      - reference (was ground_truth)
+    """
     return Dataset.from_dict(
         {
-            "question": df["question"].astype(str).tolist(),
-            "answer": df["answer"].astype(str).tolist(),
-            "contexts": df["contexts"].apply(parse_contexts).tolist(),
-            "ground_truth": df["ground_truth"].astype(str).tolist(),
+            "user_input": df["question"].astype(str).tolist(),
+            "response": df["answer"].astype(str).tolist(),
+            "retrieved_contexts": df["contexts"].apply(parse_contexts).tolist(),
+            "reference": df["ground_truth"].astype(str).tolist(),
         }
     )
