@@ -5,6 +5,15 @@ Run with:
 """
 
 import json
+import logging
+import sys
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    stream=sys.stderr,
+)
 
 import pandas as pd
 import plotly.express as px
@@ -394,7 +403,7 @@ if uploaded_file is not None:
         st.stop()
 
     st.subheader(t("data_preview"))
-    st.dataframe(df.head(10), use_container_width=True)
+    st.dataframe(df.head(10), width="stretch")
 
     missing = validate_columns(df)
     if missing:
@@ -429,7 +438,7 @@ if uploaded_file is not None:
 
         st.subheader(t("eval_results"))
         result_df = results["result_df"]
-        st.dataframe(result_df, use_container_width=True)
+        st.dataframe(result_df, width="stretch")
 
         avg_scores = results["avg_scores"]
         if avg_scores:
@@ -449,7 +458,7 @@ if uploaded_file is not None:
                 text_auto=".3f",
             )
             fig.update_layout(showlegend=False)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         csv_bytes = result_df.to_csv(index=False).encode("utf-8")
         st.download_button(
