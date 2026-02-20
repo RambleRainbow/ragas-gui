@@ -116,14 +116,16 @@ def run_evaluation(
         elif "azure" in llm_cfg.base_url:
             provider = "azure"
 
-    # Create ragas-compatible LLM using llm_factory
     ragas_llm = None
     if llm is not None:
-        # Get the client from the built LLM
-        client = getattr(llm, "client", None)
-        if client is None:
-            # Try to get the underlying client
-            client = getattr(llm, "_client", None)
+        from openai import OpenAI
+
+        client = OpenAI(
+            api_key=llm_cfg.api_key or "no-key",
+            base_url=llm_cfg.base_url or None,
+            timeout=60.0,
+            max_retries=3,
+        )
         ragas_llm = llm_factory(
             model=llm_cfg.model_name,
             provider=provider,
