@@ -181,7 +181,9 @@ def run_evaluation(
         result = evaluate(**eval_kwargs)
         result_df = result.to_pandas()
 
-        # Compute averages
+        if result_df.empty:
+            raise ValueError("Evaluation returned empty results")
+
         score_cols = [
             c
             for c in result_df.columns
@@ -197,6 +199,14 @@ def run_evaluation(
                 "reference",
             }
         ]
+
+        all_nan = all(result_df[col].isna().all() for col in score_cols)
+        if all_nan:
+            raise ValueError(
+                "All metric scores are NaN. This usually means the LLM API call failed. "
+                "Check your API key and base URL, or enable 'Raise Exceptions' in runtime settings for details."
+            )
+
         avg_scores = {
             col: float(result_df[col].mean())
             for col in score_cols

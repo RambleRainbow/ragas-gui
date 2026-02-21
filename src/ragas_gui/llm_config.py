@@ -234,7 +234,7 @@ def build_run_config(settings: RunSettings) -> Any:
 # ---------------------------------------------------------------------------
 
 
-async def test_llm_connection(cfg: LLMConfig) -> tuple[bool, str]:
+def test_llm_connection(cfg: LLMConfig) -> tuple[bool, str]:
     """Test if the LLM provider is reachable.
 
     Returns:
@@ -248,13 +248,12 @@ async def test_llm_connection(cfg: LLMConfig) -> tuple[bool, str]:
 
         client = ChatOpenAI(
             model=cfg.model_name,
-            api_key=cfg.api_key if cfg.api_key else None,  # type: ignore[arg-type]
+            api_key=cfg.api_key if cfg.api_key else None,
             base_url=cfg.base_url if cfg.base_url else None,
             temperature=0,
         )
 
-        # Simple test - just try to get a response
-        await client.ainvoke("Hi")
+        client.invoke("Hi")
 
         return True, "Connection successful"
     except Exception as e:

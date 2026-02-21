@@ -256,9 +256,7 @@ with st.sidebar:
             temperature=llm_temperature,
         )
         with st.spinner(t("testing_connection")):
-            import asyncio
-
-            success, message = asyncio.run(test_llm_connection(llm_test_cfg))
+            success, message = test_llm_connection(llm_test_cfg)
         if success:
             st.success(t("connection_success"))
         else:
