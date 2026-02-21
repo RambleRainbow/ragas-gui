@@ -107,6 +107,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "langfuse_host": "Host URL",
         "langfuse_host_help": "Cloud: https://cloud.langfuse.com | Self-hosted: your domain",
         "langfuse_help": "LangFuse provides open-source LLM observability. Get keys from project settings.",
+        "langfuse_import_error": "LangFuse import failed: {error}. Try upgrading: pip install -U langfuse, or use Python 3.12/3.13.",
         # Footer
         "footer": "Built with Streamlit + Ragas",
         # Main area
@@ -220,6 +221,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "langfuse_host": "\u4e3b\u673a URL",
         "langfuse_host_help": "\u4e91\u7aef\uff1ahttps://cloud.langfuse.com | \u81ea\u6258\u7ba1\uff1a\u4f60\u7684\u57df\u540d",
         "langfuse_help": "LangFuse \u662f\u5f00\u6e90\u7684 LLM \u53ef\u89c2\u6d4b\u5e73\u53f0\u3002\u4ece\u9879\u76ee\u8bbe\u7f6e\u83b7\u53d6\u5bc6\u94a5\u3002",
+        "langfuse_import_error": "LangFuse \u5bfc\u5165\u5931\u8d25\uff1a{error}\u3002\u8bf7\u5c1d\u8bd5\uff1apip install -U langfuse\uff0c\u6216\u4f7f\u7528 Python 3.12/3.13\u3002",
         # 页脚
         "footer": "\u57fa\u4e8e Streamlit + Ragas \u6784\u5efa",
         # 主区域

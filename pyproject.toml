@@ -7,7 +7,7 @@ name = "ragas-gui"
 version = "0.2.0"
 description = "Streamlit-based evaluation UI for Ragas RAG pipelines"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 license = {text = "MIT"}
 dependencies = [
     "ragas>=0.4",
@@ -19,6 +19,7 @@ dependencies = [
     "nest_asyncio",
     "langchain-openai",
     "langchain-community",
+    "langfuse>=2.0",
 ]
 
 [project.optional-dependencies]

@@ -381,10 +381,14 @@ with st.sidebar:
             if langfuse_host:
                 os.environ["LANGFUSE_HOST"] = langfuse_host
 
-            from langfuse.langchain import CallbackHandler
+            try:
+                from langfuse.langchain import CallbackHandler
 
-            st.session_state["langfuse_handler"] = CallbackHandler()
-            st.info(t("langfuse_help"))
+                st.session_state["langfuse_handler"] = CallbackHandler()
+                st.info(t("langfuse_help"))
+            except Exception as e:
+                st.session_state["langfuse_handler"] = None
+                st.error(t("langfuse_import_error", error=str(e)))
         else:
             st.session_state["langfuse_handler"] = None
 
