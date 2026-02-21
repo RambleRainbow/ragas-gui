@@ -54,6 +54,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "llm_provider": "LLM Provider",
         "llm_model": "Model",
         "temperature": "Temperature",
+        "max_tokens": "Max Tokens",
+        "max_tokens_help": "Maximum tokens for LLM responses. Default: 4096.",
         "api_key": "API Key",
         "api_key_help": "Required by Ragas for LLM-based metrics.",
         "api_base_url": "API Base URL",
@@ -97,6 +99,12 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "otlp_endpoint": "OTLP Endpoint",
         "otlp_help": "Only for OTLP exporters.",
         "log_content": "Log Prompt/Completion Content",
+        # LangSmith
+        "langsmith_tracing": "LangSmith Tracing",
+        "enable_langsmith": "Enable LangSmith",
+        "langsmith_api_key": "LangSmith API Key",
+        "langsmith_project": "LangSmith Project",
+        "langsmith_help": "LangSmith provides detailed LLM call tracing. Set LANGCHAIN_TRACING_V2=true internally.",
         # Footer
         "footer": "Built with Streamlit + Ragas",
         # Main area
@@ -151,6 +159,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "llm_provider": "LLM 提供商",
         "llm_model": "模型",
         "temperature": "温度",
+        "max_tokens": "最大 Token 数",
+        "max_tokens_help": "LLM 响应的最大 token 数。默认：4096。",
         "api_key": "API 密钥",
         "api_key_help": "Ragas 的 LLM 指标需要此密钥。",
         "api_base_url": "API 基础 URL",
@@ -200,6 +210,12 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "otlp_endpoint": "OTLP \u7aef\u70b9",
         "otlp_help": "\u4ec5\u7528\u4e8e OTLP \u5bfc\u51fa\u5668\u3002",
         "log_content": "\u8bb0\u5f55\u63d0\u793a/\u8865\u5168\u5185\u5bb9",
+        # LangSmith
+        "langsmith_tracing": "LangSmith \u8ffd\u8e2a",
+        "enable_langsmith": "\u542f\u7528 LangSmith",
+        "langsmith_api_key": "LangSmith API \u5bc6\u94a5",
+        "langsmith_project": "LangSmith \u9879\u76ee",
+        "langsmith_help": "LangSmith \u63d0\u4f9b\u8be6\u7ec6\u7684 LLM \u8c03\u7528\u8ffd\u8e2a\u3002\u5185\u90e8\u8bbe\u7f6e LANGCHAIN_TRACING_V2=true\u3002",
         # 页脚
         "footer": "\u57fa\u4e8e Streamlit + Ragas \u6784\u5efa",
         # 主区域

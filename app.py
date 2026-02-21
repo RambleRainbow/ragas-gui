@@ -126,21 +126,25 @@ with st.sidebar:
         saved_model = loaded.get("model", "")
         saved_base_url = loaded.get("base_url", "")
         saved_temperature = loaded.get("temperature", 0.0)
+        saved_max_tokens = loaded.get("max_tokens", 4096)
         saved_api_key = loaded.get("api_key", "")
         saved_emb_provider = loaded.get("emb_provider", "openai")
         saved_emb_base_url = loaded.get("emb_base_url", "")
         saved_emb_model = loaded.get("emb_model", "")
         saved_emb_api_key = loaded.get("emb_api_key", "")
+        saved_metrics = loaded.get("metrics", [])
     else:
         saved_provider = "openai"
         saved_model = ""
         saved_base_url = ""
         saved_temperature = 0.0
+        saved_max_tokens = 4096
         saved_api_key = ""
         saved_emb_provider = "openai"
         saved_emb_base_url = ""
         saved_emb_model = ""
         saved_emb_api_key = ""
+        saved_metrics = []
 
     provider_options = [p.value for p in Provider]
     default_idx = (
@@ -169,6 +173,14 @@ with st.sidebar:
         2.0,
         saved_temperature,
         0.05,
+    )
+    llm_max_tokens = st.number_input(
+        t("max_tokens"),
+        value=saved_max_tokens,
+        min_value=1,
+        max_value=128000,
+        step=256,
+        help=t("max_tokens_help"),
     )
 
     api_key = st.text_input(
@@ -215,36 +227,6 @@ with st.sidebar:
     )
 
     st.divider()
-    save_name = st.text_input(t("save_name"), value="")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("💾 " + t("save_settings"), key="save_settings_btn"):
-            if not save_name.strip():
-                st.error(t("save_name_required"))
-            else:
-                profiles[save_name.strip()] = {
-                    "provider": llm_provider,
-                    "model": llm_model,
-                    "base_url": llm_base_url,
-                    "temperature": llm_temperature,
-                    "api_key": api_key,
-                    "emb_provider": emb_provider,
-                    "emb_base_url": emb_base_url,
-                    "emb_model": emb_model,
-                    "emb_api_key": emb_api_key,
-                }
-                save_profiles(profiles)
-                st.success(t("settings_saved", name=save_name))
-                st.rerun()
-
-    with col2:
-        if st.button("🗑️ " + t("delete_profile"), key="delete_profile_btn"):
-            if selected_profile and selected_profile in profiles:
-                del profiles[selected_profile]
-                save_profiles(profiles)
-                st.success(t("profile_deleted", name=selected_profile))
-                st.rerun()
 
     # ---- Test connection button --------------------------------------------
     if st.button(t("test_connection"), key="test_llm_conn"):
@@ -254,6 +236,7 @@ with st.sidebar:
             model_name=llm_model,
             api_key=api_key,
             temperature=llm_temperature,
+            max_tokens=llm_max_tokens,
         )
         with st.spinner(t("testing_connection")):
             success, message = test_llm_connection(llm_test_cfg)
@@ -269,6 +252,7 @@ with st.sidebar:
         model_name=llm_model,
         api_key=api_key,
         temperature=llm_temperature,
+        max_tokens=llm_max_tokens,
     )
 
     # ---- Metrics selection ------------------------------------------------
@@ -288,11 +272,46 @@ with st.sidebar:
             for info in infos:
                 if st.checkbox(
                     info.display_name,
-                    value=False,
+                    value=info.display_name in saved_metrics,
                     help=info.description,
                     key=f"metric_{info.name}",
                 ):
                     selected_metric_names.append(info.display_name)
+
+    # ---- Save profile (after metrics selection) ---------------------------
+    st.divider()
+    save_name = st.text_input(t("save_name"), value="")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("💾 " + t("save_settings"), key="save_settings_btn"):
+            if not save_name.strip():
+                st.error(t("save_name_required"))
+            else:
+                profiles[save_name.strip()] = {
+                    "provider": llm_provider,
+                    "model": llm_model,
+                    "base_url": llm_base_url,
+                    "temperature": llm_temperature,
+                    "max_tokens": llm_max_tokens,
+                    "api_key": api_key,
+                    "emb_provider": emb_provider,
+                    "emb_base_url": emb_base_url,
+                    "emb_model": emb_model,
+                    "emb_api_key": emb_api_key,
+                    "metrics": selected_metric_names,
+                }
+                save_profiles(profiles)
+                st.success(t("settings_saved", name=save_name))
+                st.rerun()
+
+    with col2:
+        if st.button("🗑️ " + t("delete_profile"), key="delete_profile_btn"):
+            if selected_profile and selected_profile in profiles:
+                del profiles[selected_profile]
+                save_profiles(profiles)
+                st.success(t("profile_deleted", name=selected_profile))
+                st.rerun()
 
     run_settings = RunSettings()
 
@@ -333,6 +352,29 @@ with st.sidebar:
             telemetry.init()
         else:
             telemetry.config.enabled = False
+
+        st.divider()
+        st.subheader(t("langsmith_tracing"))
+        langsmith_enabled = st.checkbox(t("enable_langsmith"), value=False)
+        if langsmith_enabled:
+            langsmith_api_key = st.text_input(
+                t("langsmith_api_key"),
+                type="password",
+                value="",
+            )
+            langsmith_project = st.text_input(
+                t("langsmith_project"),
+                value="ragas-gui",
+            )
+            import os
+
+            os.environ["LANGCHAIN_TRACING_V2"] = "true"
+            os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+            if langsmith_api_key:
+                os.environ["LANGCHAIN_API_KEY"] = langsmith_api_key
+            if langsmith_project:
+                os.environ["LANGCHAIN_PROJECT"] = langsmith_project
+            st.info(t("langsmith_help"))
 
     st.divider()
     st.caption(t("footer"))

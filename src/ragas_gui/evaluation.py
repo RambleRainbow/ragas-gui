@@ -177,12 +177,15 @@ def _evaluate_impl(
     )
 
     with ctx as ev:
+        from ragas.cost import get_token_usage_for_openai
+
         eval_kwargs: dict[str, Any] = {
             "dataset": ragas_ds,
             "metrics": metrics,
             "run_config": run_config,
             "raise_exceptions": run_settings.raise_exceptions,
             "show_progress": run_settings.show_progress,
+            "token_usage_parser": get_token_usage_for_openai,
         }
 
         if ragas_llm is not None:
@@ -198,6 +201,14 @@ def _evaluate_impl(
 
         result = evaluate(**eval_kwargs)
         result_df = result.to_pandas()
+
+        try:
+            total_tokens = result.total_tokens()
+            if total_tokens and hasattr(ev, "token_usage"):
+                ev.token_usage.prompt_tokens = total_tokens.input_tokens or 0
+                ev.token_usage.completion_tokens = total_tokens.output_tokens or 0
+        except Exception:
+            pass
 
         if result_df.empty:
             raise ValueError("Evaluation returned empty results")

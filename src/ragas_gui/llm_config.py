@@ -102,7 +102,7 @@ class LLMConfig:
     model_name: str = ""
     api_key: str = ""
     temperature: float = 0.0
-    max_tokens: int | None = None
+    max_tokens: int = 4096
     system_prompt: str = ""
 
     def __post_init__(self) -> None:
@@ -183,9 +183,8 @@ def build_llm(cfg: LLMConfig) -> Any:
         "model": cfg.model_name,
         "temperature": cfg.temperature,
         "api_key": cfg.api_key or "no-key",
+        "max_tokens": cfg.max_tokens,
     }
-    if cfg.max_tokens:
-        kwargs["max_tokens"] = cfg.max_tokens
     if cfg.base_url:
         kwargs["base_url"] = cfg.base_url
 
