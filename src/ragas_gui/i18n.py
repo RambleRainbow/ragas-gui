@@ -100,11 +100,13 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "otlp_help": "Only for OTLP exporters.",
         "log_content": "Log Prompt/Completion Content",
         # LangSmith
-        "langsmith_tracing": "LangSmith Tracing",
-        "enable_langsmith": "Enable LangSmith",
-        "langsmith_api_key": "LangSmith API Key",
-        "langsmith_project": "LangSmith Project",
-        "langsmith_help": "LangSmith provides detailed LLM call tracing. Set LANGCHAIN_TRACING_V2=true internally.",
+        "langfuse_tracing": "LangFuse Tracing",
+        "enable_langfuse": "Enable LangFuse",
+        "langfuse_public_key": "Public Key (pk-lf-...)",
+        "langfuse_secret_key": "Secret Key (sk-lf-...)",
+        "langfuse_host": "Host URL",
+        "langfuse_host_help": "Cloud: https://cloud.langfuse.com | Self-hosted: your domain",
+        "langfuse_help": "LangFuse provides open-source LLM observability. Get keys from project settings.",
         # Footer
         "footer": "Built with Streamlit + Ragas",
         # Main area
@@ -211,11 +213,13 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "otlp_help": "\u4ec5\u7528\u4e8e OTLP \u5bfc\u51fa\u5668\u3002",
         "log_content": "\u8bb0\u5f55\u63d0\u793a/\u8865\u5168\u5185\u5bb9",
         # LangSmith
-        "langsmith_tracing": "LangSmith \u8ffd\u8e2a",
-        "enable_langsmith": "\u542f\u7528 LangSmith",
-        "langsmith_api_key": "LangSmith API \u5bc6\u94a5",
-        "langsmith_project": "LangSmith \u9879\u76ee",
-        "langsmith_help": "LangSmith \u63d0\u4f9b\u8be6\u7ec6\u7684 LLM \u8c03\u7528\u8ffd\u8e2a\u3002\u5185\u90e8\u8bbe\u7f6e LANGCHAIN_TRACING_V2=true\u3002",
+        "langfuse_tracing": "LangFuse \u8ffd\u8e2a",
+        "enable_langfuse": "\u542f\u7528 LangFuse",
+        "langfuse_public_key": "\u516c\u94a5 (pk-lf-...)",
+        "langfuse_secret_key": "\u79d8\u94a5 (sk-lf-...)",
+        "langfuse_host": "\u4e3b\u673a URL",
+        "langfuse_host_help": "\u4e91\u7aef\uff1ahttps://cloud.langfuse.com | \u81ea\u6258\u7ba1\uff1a\u4f60\u7684\u57df\u540d",
+        "langfuse_help": "LangFuse \u662f\u5f00\u6e90\u7684 LLM \u53ef\u89c2\u6d4b\u5e73\u53f0\u3002\u4ece\u9879\u76ee\u8bbe\u7f6e\u83b7\u53d6\u5bc6\u94a5\u3002",
         # 页脚
         "footer": "\u57fa\u4e8e Streamlit + Ragas \u6784\u5efa",
         # 主区域

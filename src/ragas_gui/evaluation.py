@@ -75,6 +75,7 @@ def run_evaluation(
     emb_cfg: EmbeddingConfig,
     run_settings: RunSettings,
     telemetry: TelemetryManager | None = None,
+    callbacks: list[Any] | None = None,
 ) -> dict[str, Any]:
     """Run a full Ragas evaluation and return a results dict.
 
@@ -89,7 +90,7 @@ def run_evaluation(
 
     def _run_in_thread():
         return _evaluate_impl(
-            df, metric_infos, llm_cfg, emb_cfg, run_settings, telemetry
+            df, metric_infos, llm_cfg, emb_cfg, run_settings, telemetry, callbacks
         )
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
@@ -104,6 +105,7 @@ def _evaluate_impl(
     emb_cfg: EmbeddingConfig,
     run_settings: RunSettings,
     telemetry: TelemetryManager | None = None,
+    callbacks: list[Any] | None = None,
 ) -> dict[str, Any]:
     """Internal implementation of evaluation, runs in a separate thread."""
     import os
@@ -198,6 +200,8 @@ def _evaluate_impl(
             eval_kwargs["column_map"] = run_settings.column_map
         if run_settings.experiment_name:
             eval_kwargs["experiment_name"] = run_settings.experiment_name
+        if callbacks:
+            eval_kwargs["callbacks"] = callbacks
 
         result = evaluate(**eval_kwargs)
         result_df = result.to_pandas()

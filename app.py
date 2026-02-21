@@ -354,27 +354,39 @@ with st.sidebar:
             telemetry.config.enabled = False
 
         st.divider()
-        st.subheader(t("langsmith_tracing"))
-        langsmith_enabled = st.checkbox(t("enable_langsmith"), value=False)
-        if langsmith_enabled:
-            langsmith_api_key = st.text_input(
-                t("langsmith_api_key"),
+        st.subheader(t("langfuse_tracing"))
+        langfuse_enabled = st.checkbox(t("enable_langfuse"), value=False)
+        if langfuse_enabled:
+            langfuse_public_key = st.text_input(
+                t("langfuse_public_key"),
                 type="password",
                 value="",
             )
-            langsmith_project = st.text_input(
-                t("langsmith_project"),
-                value="ragas-gui",
+            langfuse_secret_key = st.text_input(
+                t("langfuse_secret_key"),
+                type="password",
+                value="",
+            )
+            langfuse_host = st.text_input(
+                t("langfuse_host"),
+                value="https://cloud.langfuse.com",
+                help=t("langfuse_host_help"),
             )
             import os
 
-            os.environ["LANGCHAIN_TRACING_V2"] = "true"
-            os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
-            if langsmith_api_key:
-                os.environ["LANGCHAIN_API_KEY"] = langsmith_api_key
-            if langsmith_project:
-                os.environ["LANGCHAIN_PROJECT"] = langsmith_project
-            st.info(t("langsmith_help"))
+            if langfuse_public_key:
+                os.environ["LANGFUSE_PUBLIC_KEY"] = langfuse_public_key
+            if langfuse_secret_key:
+                os.environ["LANGFUSE_SECRET_KEY"] = langfuse_secret_key
+            if langfuse_host:
+                os.environ["LANGFUSE_HOST"] = langfuse_host
+
+            from langfuse.langchain import CallbackHandler
+
+            st.session_state["langfuse_handler"] = CallbackHandler()
+            st.info(t("langfuse_help"))
+        else:
+            st.session_state["langfuse_handler"] = None
 
     st.divider()
     st.caption(t("footer"))
@@ -416,6 +428,9 @@ if uploaded_file is not None:
     if st.button(t("run_evaluation"), type="primary", disabled=run_disabled):
         metric_infos = [get_metric_info(n) for n in selected_metric_names]
 
+        langfuse_handler = st.session_state.get("langfuse_handler")
+        callbacks = [langfuse_handler] if langfuse_handler else None
+
         with st.spinner(t("running_spinner")):
             try:
                 results = run_evaluation(
@@ -425,6 +440,7 @@ if uploaded_file is not None:
                     emb_cfg=emb_cfg,
                     run_settings=run_settings,
                     telemetry=telemetry if telemetry.config.enabled else None,
+                    callbacks=callbacks,
                 )
             except Exception as exc:
                 st.error(t("eval_failed", error=str(exc)))
