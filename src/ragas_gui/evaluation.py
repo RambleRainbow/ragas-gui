@@ -85,12 +85,30 @@ def run_evaluation(
       ``avg_scores`` – dict of metric_name → average score
       ``event``      – the ``EvaluationEvent`` (if telemetry is active)
     """
+    import concurrent.futures
+
+    def _run_in_thread():
+        return _evaluate_impl(
+            df, metric_infos, llm_cfg, emb_cfg, run_settings, telemetry
+        )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(_run_in_thread)
+        return future.result()
+
+
+def _evaluate_impl(
+    df: pd.DataFrame,
+    metric_infos: list[MetricInfo],
+    llm_cfg: LLMConfig,
+    emb_cfg: EmbeddingConfig,
+    run_settings: RunSettings,
+    telemetry: TelemetryManager | None = None,
+) -> dict[str, Any]:
+    """Internal implementation of evaluation, runs in a separate thread."""
     import os
 
-    import nest_asyncio
     from ragas import evaluate
-
-    nest_asyncio.apply()
 
     # Set API key in env for ragas internals
     if llm_cfg.api_key:
